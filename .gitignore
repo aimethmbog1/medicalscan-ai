@@ -1,0 +1,9 @@
+.streamlit/secrets.toml
+__pycache__/
+*.pyc
+.env
+venv/
+venv_kidney/
+dataset/
+.DS_Store
+*.log.streamlit/secrets.toml
