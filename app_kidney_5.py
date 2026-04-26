@@ -756,48 +756,55 @@ with tab_scan:
                 time.sleep(0.3)
                 model_ct, thr, err = load_ct_model(K['MP'], K['TP'])
 
+            # ─────────────────────────────────────────────────────────────────
+            # CORRECTION INDENTATION : if / elif / else alignés à 12 espaces
+            # ─────────────────────────────────────────────────────────────────
             if err == "DEMO_MODE":
-    st.markdown("""
-    <div style='background:#FFF8E7;border:1px solid #F0D080;
-                border-left:4px solid #D4AC0D;border-radius:10px;
-                padding:20px 24px;margin-bottom:16px;'>
-        <div style='font-size:0.85rem;font-weight:700;color:#7D6608;
-                    margin-bottom:8px;'>⚠️ Mode Démonstration</div>
-        <div style='font-size:0.82rem;color:#5D4A00;line-height:1.6;'>
-            TensorFlow n'est pas disponible sur Python 3.14 (Streamlit Cloud).<br>
-            Pour utiliser la classification CT, lancez l'application en local :<br>
-            <code>streamlit run app_kidney_5.py</code>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+                st.markdown("""
+                <div style='background:#FFF8E7;border:1px solid #F0D080;
+                            border-left:4px solid #D4AC0D;border-radius:10px;
+                            padding:20px 24px;margin-bottom:16px;'>
+                    <div style='font-size:0.85rem;font-weight:700;color:#7D6608;
+                                margin-bottom:8px;'>⚠️ Mode Démonstration</div>
+                    <div style='font-size:0.82rem;color:#5D4A00;line-height:1.6;'>
+                        TensorFlow n'est pas disponible sur Python 3.14 (Streamlit Cloud).<br>
+                        Pour utiliser la classification CT, lancez l'application en local :<br>
+                        <code>streamlit run app_kidney_5.py</code>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-    # En mode démo : simuler un résultat pour tester le chatbot
-    st.markdown("<div style='font-size:0.78rem;color:#7F8C8D;margin-bottom:8px;'>Sélectionnez un cas de démonstration :</div>", unsafe_allow_html=True)
-    demo_cls = st.selectbox("", ["Tumor", "Stone", "Cyst", "Normal"], label_visibility="collapsed")
-    demo_conf = {"Tumor": 0.87, "Stone": 0.92, "Cyst": 0.78, "Normal": 0.95}
+                st.markdown(
+                    "<div style='font-size:0.78rem;color:#7F8C8D;margin-bottom:8px;'>"
+                    "Sélectionnez un cas de démonstration :</div>",
+                    unsafe_allow_html=True,
+                )
+                demo_cls  = st.selectbox("", ["Tumor", "Stone", "Cyst", "Normal"],
+                                         label_visibility="collapsed")
+                demo_conf = {"Tumor": 0.87, "Stone": 0.92, "Cyst": 0.78, "Normal": 0.95}
 
-    if st.button("▶ Lancer simulation"):
-        cls_idx = list(CLASSES).index(demo_cls)
-        probs   = {c: 0.02 for c in CLASSES}
-        probs[demo_cls] = demo_conf[demo_cls]
-        total   = sum(probs.values())
-        probs   = {c: v/total for c, v in probs.items()}
+                if st.button("▶ Lancer simulation"):
+                    cls_idx = list(CLASSES).index(demo_cls)
+                    probs   = {c: 0.02 for c in CLASSES}
+                    probs[demo_cls] = demo_conf[demo_cls]
+                    total   = sum(probs.values())
+                    probs   = {c: v / total for c, v in probs.items()}
+                    result  = {
+                        'class':         demo_cls,
+                        'class_idx':     cls_idx,
+                        'confidence':    demo_conf[demo_cls],
+                        'probabilities': probs,
+                        'timestamp':     datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    }
+                    for k in ['last_result', 'chat_history', 'chat_system',
+                              'summary', 'translations', 'audio_data']:
+                        st.session_state.pop(k, None)
+                    st.session_state['last_result'] = result
+                    st.rerun()
 
-        result = {
-            'class':         demo_cls,
-            'class_idx':     cls_idx,
-            'confidence':    demo_conf[demo_cls],
-            'probabilities': probs,
-            'timestamp':     datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        }
-        for k in ['last_result','chat_history','chat_system',
-                  'summary','translations','audio_data']:
-            st.session_state.pop(k, None)
-        st.session_state['last_result'] = result
-        st.rerun()
+            elif err:
+                st.error(f"Erreur modèle : {err}")
 
-elif err:
-    st.error(f"Erreur modèle : {err}")
             else:
                 result = predict_ct(model_ct, thr, pil_img)
                 for k in ['last_result', 'chat_history', 'chat_system',
@@ -811,8 +818,6 @@ elif err:
                 ctx  = MEDICAL_CONTEXT[cls]
 
                 # ── BLOC 1 : Titre + Classe + Label ──────────────────────────
-                # Séparé en st.markdown indépendant pour éviter le conflit
-                # f-string Python vs accolades CSS dans un même bloc HTML
                 st.markdown(
                     f"<div style='background:#FFFFFF;border:1px solid #DDE3EA;"
                     f"border-radius:10px;padding:24px 24px 0 24px;"
@@ -846,8 +851,7 @@ elif err:
                     unsafe_allow_html=True,
                 )
 
-                # ── BLOC 3 : Métriques — colonnes natives Streamlit ───────────
-                # Évite tout conflit f-string / CSS en utilisant st.columns
+                # ── BLOC 3 : Métriques ────────────────────────────────────────
                 m1, m2, m3 = st.columns(3)
                 with m1:
                     st.markdown(
