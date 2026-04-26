@@ -7,6 +7,44 @@
  Groupe 2 · M2 IABD · HAMAD · KAMNO · EFEMBA · MBOG
 ==============================================================================
 """
+# ─────────────────────────────────────────────────────────────────────────────
+# AUTO-INSTALLATION TENSORFLOW — compatible tous environnements
+# ─────────────────────────────────────────────────────────────────────────────
+import subprocess
+import sys
+import importlib
+
+def install_tensorflow():
+    """Installe TensorFlow si absent — compatible Python 3.11-3.14."""
+    try:
+        import tensorflow as tf
+        return True
+    except ImportError:
+        pass
+
+    tf_packages = [
+        "tensorflow-cpu==2.16.1",
+        "tensorflow-cpu>=2.13.0,<2.17.0",
+        "tensorflow>=2.13.0,<2.17.0",
+        "tf-nightly-cpu",
+    ]
+    for pkg in tf_packages:
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", pkg, "--quiet"],
+                stderr=subprocess.DEVNULL,
+            )
+            import tensorflow as tf
+            return True
+        except Exception:
+            continue
+    return False
+
+_tf_ok = install_tensorflow()
+if not _tf_ok:
+    import streamlit as st
+    st.error("❌ TensorFlow non disponible sur cet environnement.")
+    st.info("L'application fonctionne sans le modèle CT. Le chatbot médical reste actif.")
 
 import os, io, datetime, time
 import numpy as np
