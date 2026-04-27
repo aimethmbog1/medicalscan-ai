@@ -41,10 +41,7 @@ def install_tensorflow():
     return False
 
 _tf_ok = install_tensorflow()
-if not _tf_ok:
-    import streamlit as st
-    st.error("❌ TensorFlow non disponible sur cet environnement.")
-    st.info("L'application fonctionne sans le modèle CT. Le chatbot médical reste actif.")
+# Message d'erreur TensorFlow supprimé — le mode démonstration gère le cas silencieusement
 
 import os, io, datetime, time
 import numpy as np
@@ -346,6 +343,42 @@ st.markdown("""
 .sb-ok   { background: #F0FBF4; border: 1px solid #82D0A0; color: #1A7A4A; }
 .sb-nok  { background: #FDF2F2; border: 1px solid #E8A0A0; color: #C0392B; }
 
+/* Bouton navigation app externe */
+.app-link-btn {
+    display: block;
+    margin: 8px 0 0 0;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #1B4F72, #2471A3);
+    color: #FFFFFF !important;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: opacity 0.2s;
+    letter-spacing: 0.3px;
+}
+.app-link-btn:hover { opacity: 0.85; color: #FFFFFF !important; }
+.app-link-btn.disabled {
+    background: #C0CDD8;
+    cursor: not-allowed;
+    pointer-events: none;
+    color: #8A9BAA !important;
+}
+.app-link-badge {
+    display: inline-block;
+    font-size: 0.55rem;
+    background: #F0A500;
+    color: #fff;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: 6px;
+    vertical-align: middle;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
 /* Buttons */
 .stButton > button {
     font-family: 'Inter', sans-serif !important;
@@ -433,6 +466,35 @@ with st.sidebar:
     show_translation = st.toggle("Traduction 🇩🇪", value=True)
     auto_summary     = st.toggle("Résumé automatique", value=True)
     sim_mode         = st.toggle("Mode simulation patient", value=False)
+
+    # ── BOUTON NAVIGATION VERS AUTRE APPLICATION ─────────────────────────────
+    # TODO : Remplacer APP_URL par l'URL de votre app quand elle sera disponible
+    # et passer APP_PRET = True
+    APP_URL  = "YOUR_APP_URL_HERE"  # ← Remplacez ici
+    APP_PRET = False                  # ← Passez à True quand l'app est prête
+
+    st.markdown("<div style='padding:0 8px;'><div class='sb-section'>Applications</div></div>", unsafe_allow_html=True)
+    if APP_PRET:
+        st.markdown(f"""
+        <div style='padding:0 8px 16px 8px;'>
+            <a href="{APP_URL}" target="_blank" class="app-link-btn">
+                🔗 Accéder à l'application
+            </a>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div style='padding:0 8px 16px 8px;'>
+            <div class="app-link-btn disabled">
+                🔗 Application secondaire
+                <span class="app-link-badge">BIENTÔT</span>
+            </div>
+            <div style='font-size:0.62rem;color:#A0B0C0;margin-top:6px;text-align:center;'>
+                En cours de développement
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    # ─────────────────────────────────────────────────────────────────────────
 
     st.markdown("""
     <div style='padding:16px;margin-top:auto;border-top:1px solid #DDE3EA;
