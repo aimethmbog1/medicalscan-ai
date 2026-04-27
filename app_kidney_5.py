@@ -470,8 +470,8 @@ with st.sidebar:
     # ── BOUTON NAVIGATION VERS AUTRE APPLICATION ─────────────────────────────
     # TODO : Remplacer APP_URL par l'URL de votre app quand elle sera disponible
     # et passer APP_PRET = True
-    APP_URL  = "YOUR_APP_URL_HERE"  # ← Remplacez ici
-    APP_PRET = False                  # ← Passez à True quand l'app est prête
+    APP_URL  = "https://stocksightaistockprediction-rrceguvir9vxa9tmappwkps.streamlit.app/"
+    APP_PRET = True
 
     st.markdown("<div style='padding:0 8px;'><div class='sb-section'>Applications</div></div>", unsafe_allow_html=True)
     if APP_PRET:
