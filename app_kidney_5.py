@@ -497,8 +497,7 @@ with st.sidebar:
     # ─────────────────────────────────────────────────────────────────────────
 
     st.markdown("""
-    <div style='padding:16px;margin-top:auto;border-top:1px solid #DDE3EA;
-                position:absolute;bottom:0;left:0;right:0;background:#FFF;'>
+    <div style='padding:16px 16px 16px 16px;margin-top:120px;border-top:1px solid #DDE3EA;background:#FFF;'>
         <div style='font-size:0.65rem;color:#7F8C8D;line-height:1.6;'>
             <strong style='color:#1B4F72;'>Groupe 2 · M2 IABD</strong><br>
             HAMAD · KAMNO · EFEMBA · MBOG<br>
