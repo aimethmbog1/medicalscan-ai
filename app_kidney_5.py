@@ -1,25 +1,14 @@
 """
 ==============================================================================
  MEDICALScan AI — Application Streamlit v7
- CORRECTIONS :
-   - Suppression du spinner/fond flou global (st.spinner retiré du flux principal)
-   - Prédiction automatique sans sélection de classe manuelle
-   - Résultat affiché à DROITE de l'image (layout col_left / col_right)
-   - Style upload corrigé
-   - Résumé auto généré après traduction allemande dans le chat
-   - Message succès simplifié
-   - Plus de rerun() intempestifs
-==============================================================================
  Groupe 2 · M2 IABD · HAMAD · KAMNO · EFEMBA · MBOG
 ==============================================================================
 """
-
 import os, io, datetime, time
 import numpy as np
 import streamlit as st
 from PIL import Image
 
-# ─────────────────────────────────────────────────────────────────────────────
 # CONFIG PAGE — DOIT ÊTRE EN PREMIER
 # ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -151,28 +140,68 @@ div[data-testid="stDecoration"] { display: none !important; }
     border-bottom: 1px solid #EEF2F5; display: flex; align-items: center; gap: 8px;
 }
 
-/* ── Upload zone — style corrigé ─────────────────────────────────────── */
+/* ── Upload zone — style raffiné ──────────────────────────────────────── */
 [data-testid="stFileUploaderDropzone"] {
-    background: #F8FAFC !important;
-    border: 2px dashed #B8C8D8 !important;
-    border-radius: 12px !important;
-    padding: 28px 20px !important;
-    transition: all 0.2s ease !important;
+    background: #FFFFFF !important;
+    border: 1.5px dashed #C8D8E8 !important;
+    border-radius: 14px !important;
+    padding: 36px 24px !important;
+    transition: border-color 0.18s ease, background 0.18s ease !important;
     text-align: center !important;
+    position: relative !important;
 }
 [data-testid="stFileUploaderDropzone"]:hover {
-    border-color: #1B4F72 !important; background: #EBF5FB !important;
+    border-color: #1B4F72 !important;
+    background: #EBF5FB !important;
 }
-[data-testid="stFileUploaderDropzone"] > div { gap: 8px !important; }
+/* Icône centrale via before (fallback élégant) */
+[data-testid="stFileUploaderDropzone"] > div {
+    gap: 10px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+}
+/* Texte principal */
+[data-testid="stFileUploaderDropzone"] > div > span {
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
+    color: #1A2332 !important;
+}
+/* Taille max / formats */
+[data-testid="stFileUploaderDropzone"] small {
+    font-size: 0.72rem !important;
+    color: #7F8C8D !important;
+    letter-spacing: 0.2px !important;
+}
+/* Bouton Browse */
 [data-testid="stFileUploaderDropzone"] button {
-    background: #1B4F72 !important; color: #FFF !important;
-    border: none !important; border-radius: 6px !important;
-    padding: 8px 18px !important; font-size: 0.78rem !important;
-    font-weight: 500 !important; cursor: pointer !important;
-    margin-top: 10px !important;
+    background: #1B4F72 !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 7px !important;
+    padding: 7px 20px !important;
+    font-size: 0.76rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    margin-top: 6px !important;
+    letter-spacing: 0.2px !important;
+    transition: background 0.15s !important;
+    box-shadow: 0 1px 3px rgba(27,79,114,0.18) !important;
 }
-[data-testid="stFileUploaderDropzone"] button:hover { background: #154360 !important; }
-[data-testid="stFileUploaderDropzone"] small { color: #7F8C8D !important; font-size: 0.72rem !important; }
+[data-testid="stFileUploaderDropzone"] button:hover {
+    background: #154360 !important;
+}
+/* Badge fichier sélectionné */
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] {
+    background: #EBF5FB !important;
+    border: 1px solid #B5D4F4 !important;
+    border-radius: 8px !important;
+    padding: 10px 14px !important;
+}
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] span {
+    font-size: 0.78rem !important;
+    color: #0C447C !important;
+    font-weight: 500 !important;
+}
 
 /* ── Résultat principal ───────────────────────────────────────────────── */
 .result-header {
@@ -625,42 +654,78 @@ with tab_scan:
 
     # ── Colonne GAUCHE : Upload ────────────────────────────────────────────────
     with col_left:
+        # ── En-tête section upload ─────────────────────────────────────────────
         st.markdown("""
-        <div class="med-card">
-            <div class="med-card-title"><span>📁</span> Image CT — Upload</div>
-            <p style='font-size:0.75rem;color:#7F8C8D;margin-bottom:10px;'>
-                Glissez votre image CT rénale ici · JPEG · PNG · JPG
-            </p>
+        <div style='display:flex;align-items:center;gap:10px;margin-bottom:14px;'>
+            <div style='width:32px;height:32px;border-radius:8px;background:#EBF5FB;
+                        border:1px solid #B5D4F4;display:flex;align-items:center;
+                        justify-content:center;flex-shrink:0;'>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="#1B4F72" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="3"/>
+                    <circle cx="12" cy="12" r="4"/>
+                    <line x1="12" y1="3" x2="12" y2="6"/>
+                    <line x1="12" y1="18" x2="12" y2="21"/>
+                    <line x1="3" y1="12" x2="6" y2="12"/>
+                    <line x1="18" y1="12" x2="21" y2="12"/>
+                </svg>
+            </div>
+            <div>
+                <div style='font-size:0.82rem;font-weight:600;color:#1A2332;'>Image CT rénale</div>
+                <div style='font-size:0.68rem;color:#7F8C8D;margin-top:1px;'>
+                    JPEG · PNG · JPG acceptés
+                </div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
         uploaded = st.file_uploader(
-            "Choisir une image CT",
+            "Déposez votre scan ici ou cliquez pour choisir",
             type=["jpg", "jpeg", "png"],
-            label_visibility="collapsed",
+            label_visibility="visible",
             key="ct_upload",
         )
 
         if uploaded:
             pil_img = Image.open(uploaded)
-            st.image(pil_img, caption=f"📷 {uploaded.name}", use_container_width=True)
+            # Badge fichier sélectionné
             st.markdown(
-                f"<div style='display:flex;gap:10px;margin-top:8px;'>"
-                f"<div style='flex:1;background:#F8FAFC;border:1px solid #DDE3EA;border-radius:6px;padding:9px;text-align:center;'><div style='font-size:0.65rem;color:#7F8C8D;'>DIM.</div><div style='font-size:0.8rem;font-weight:600;color:#1A2332;font-family:monospace;'>{pil_img.size[0]}×{pil_img.size[1]}</div></div>"
-                f"<div style='flex:1;background:#F8FAFC;border:1px solid #DDE3EA;border-radius:6px;padding:9px;text-align:center;'><div style='font-size:0.65rem;color:#7F8C8D;'>FORMAT</div><div style='font-size:0.8rem;font-weight:600;color:#1A2332;'>{pil_img.mode}</div></div>"
-                f"<div style='flex:1;background:#F8FAFC;border:1px solid #DDE3EA;border-radius:6px;padding:9px;text-align:center;'><div style='font-size:0.65rem;color:#7F8C8D;'>TAILLE</div><div style='font-size:0.8rem;font-weight:600;color:#1A2332;'>{uploaded.size//1024} Ko</div></div>"
-                f"</div>",
+                f"<div style='display:flex;align-items:center;gap:10px;"
+                f"background:#EBF5FB;border:1px solid #B5D4F4;border-radius:8px;"
+                f"padding:10px 14px;margin-bottom:10px;'>"
+                f"<div style='width:36px;height:36px;border-radius:7px;background:#1B4F72;"
+                f"display:flex;align-items:center;justify-content:center;flex-shrink:0;'>"
+                f"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='#fff' "
+                f"stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>"
+                f"<rect x='3' y='3' width='18' height='18' rx='3'/>"
+                f"<circle cx='12' cy='12' r='4'/></svg></div>"
+                f"<div style='flex:1;min-width:0;'>"
+                f"<div style='font-size:0.78rem;font-weight:600;color:#0C447C;"
+                f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>"
+                f"{uploaded.name}</div>"
+                f"<div style='font-size:0.68rem;color:#185FA5;margin-top:2px;'>"
+                f"{pil_img.size[0]}×{pil_img.size[1]} px · {pil_img.mode} · {uploaded.size//1024} Ko"
+                f"</div></div>"
+                f"<div style='display:flex;align-items:center;gap:4px;background:#F0FBF4;"
+                f"border:0.5px solid #82D0A0;border-radius:5px;padding:3px 9px;'>"
+                f"<div style='width:5px;height:5px;border-radius:50%;background:#1A7A4A;'></div>"
+                f"<span style='font-size:0.68rem;font-weight:500;color:#1A7A4A;'>Prêt</span>"
+                f"</div></div>",
                 unsafe_allow_html=True,
             )
+            st.image(pil_img, caption="", use_container_width=True)
         else:
+            # Placeholder quand aucune image (affiché sous le widget Streamlit)
             st.markdown("""
-            <div style='height:220px;display:flex;align-items:center;justify-content:center;
-                        flex-direction:column;gap:10px;'>
-                <div style='font-size:3rem;opacity:0.2;'>🫁</div>
-                <p style='font-size:0.75rem;color:#A0B0C0;text-align:center;'>
-                    Aucune image sélectionnée<br>
-                    <span style='font-size:0.68rem;'>Utilisez le bouton ci-dessus</span>
-                </p>
+            <div style='text-align:center;padding:12px 0 4px;'>
+                <div style='display:flex;justify-content:center;gap:6px;'>
+                    <span style='font-size:0.68rem;padding:2px 9px;background:#F8FAFC;
+                                 border:0.5px solid #DDE3EA;border-radius:4px;color:#7F8C8D;'>JPEG</span>
+                    <span style='font-size:0.68rem;padding:2px 9px;background:#F8FAFC;
+                                 border:0.5px solid #DDE3EA;border-radius:4px;color:#7F8C8D;'>PNG</span>
+                    <span style='font-size:0.68rem;padding:2px 9px;background:#F8FAFC;
+                                 border:0.5px solid #DDE3EA;border-radius:4px;color:#7F8C8D;'>JPG</span>
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
