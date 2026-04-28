@@ -1198,15 +1198,18 @@ with tab_scan:
                 pct_class = "prob-top" if ip else ""
                 # Badge : TOP pour la gagnante, emoji sinon
                 badge_txt = "TOP" if ip else cc_emo
-                # Surbrillance de la ligne gagnante
+                # Surbrillance de la ligne gagnante, fond blanc pour les autres
                 row_style = (
                     "background:rgba(13,71,161,0.18);border-radius:6px;"
                     "padding:4px 8px;margin:6px -8px;"
-                ) if ip else "padding:2px 0;"
+                ) if ip else (
+                    "background:rgba(255,255,255,0.92);border-radius:6px;"
+                    "padding:4px 8px;margin:3px -8px;"
+                )
 
                 p_pct      = f"{p*100:.1f}"
-                name_color = cc_color if ip else "#c8deff"
-                pct_color  = cc_color if ip else "#c8deff"
+                name_color = cc_color if ip else "#1a202c"
+                pct_color  = cc_color if ip else "#1a202c"
                 st.markdown(
                     f"<div class='prob-row' style='{row_style}'>"
                     f"<div class='prob-name {nm_class}' style='color:{name_color};'>{c}</div>"
