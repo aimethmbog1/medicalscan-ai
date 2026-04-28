@@ -1,11 +1,7 @@
 """
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  MEDICALScan AI  ·  Application Streamlit                                  ║
-║  Classification CT Rénale  ·  KidneyClassifier v5  ·  AUC 1.00            ║
-║  Style : StockSight AI Design System                                        ║
-║  (dark navy · blueprint canvas · Orbitron · glassmorphism · néons bleus)   ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║  Groupe 2 · M2 IABD · HAMAD · KAMNO · EFEMBA · MBOG · 2026               ║
+║  MEDICALScan AI  ·  Application Streamlit                                    ║
+║  Groupe 2 · M2 IABD · HAMAD · KAMNO · EFEMBA · MBOG · 2026                   ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 """
 
@@ -422,15 +418,27 @@ section[data-testid="stSidebar"]::-webkit-scrollbar-thumb:hover { background: rg
     background: linear-gradient(90deg,transparent,var(--card-accent,#42a5f5),transparent);
 }
 
-/* Barre de probabilité */
+/* ── CORRECTION BARRES DE PROBABILITÉ ──
+   Tous les éléments en opacity:1 pour garantir la lisibilité sur fond sombre */
 .prob-row { display:flex; align-items:center; gap:10px; margin:8px 0; }
 .prob-name {
     font-family:'Share Tech Mono',monospace; font-size:12px;
-    color:#e0eaff; width:60px; flex-shrink:0; letter-spacing:0.5px;
+    color:#e0eaff;          /* blanc cassé toujours visible */
+    width:65px; flex-shrink:0; letter-spacing:0.5px;
+    font-weight: 600;
 }
-.prob-track { flex:1; height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); }
+.prob-name.prob-top {
+    color:#ffffff;           /* blanc pur pour la classe gagnante */
+    font-weight:700;
+}
+.prob-track { flex:1; height:8px; background:rgba(255,255,255,0.12); border-radius:4px; overflow:hidden; border:1px solid rgba(255,255,255,0.15); }
 .prob-fill  { height:100%; border-radius:4px; transition: width 0.8s ease; }
-.prob-pct   { font-family:'Share Tech Mono',monospace; font-size:11px; color:#e0eaff; width:42px; text-align:right; flex-shrink:0; }
+.prob-pct   {
+    font-family:'Share Tech Mono',monospace; font-size:12px;
+    color:#e0eaff;           /* toujours lisible */
+    width:46px; text-align:right; flex-shrink:0; font-weight:600;
+}
+.prob-pct.prob-top { color:#ffffff; font-weight:700; }
 .prob-badge { font-size:10px; font-weight:700; padding:3px 8px; border-radius:10px; width:48px; text-align:center; flex-shrink:0; font-family:'Share Tech Mono',monospace; color:#ffffff !important; }
 
 /* Alerte RAG dark — fonds opaques */
@@ -718,10 +726,21 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    st.markdown("<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;letter-spacing:2px;text-transform:uppercase;padding:0 6px;margin:12px 0 6px;'>Modèle LLM</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;"
+        "letter-spacing:2px;text-transform:uppercase;padding:0 6px;margin:12px 0 6px;'>Modèle LLM</div>",
+        unsafe_allow_html=True,
+    )
+
+    # ── CORRECTION : suppression des modèles désactivés (mixtral, gemma2) ──
     groq_model: str = st.selectbox(
         "groq_model",
-        ["llama-3.3-70b-versatile","llama-3.1-8b-instant","mixtral-8x7b-32768","gemma2-9b-it"],
+        [
+            "llama-3.3-70b-versatile",   # meilleur choix par défaut
+            "llama-3.1-8b-instant",       # rapide, léger
+            "llama3-70b-8192",            # remplace mixtral
+            "llama3-8b-8192",             # remplace gemma2
+        ],
         label_visibility="collapsed",
     )
 
@@ -913,7 +932,7 @@ def render_ct_result(res: dict) -> None:
     ts_short = res["ts"][-8:]
     conf_pct = f"{conf*100:.1f}"
 
-    # En-tête résultat — nom de classe en couleur vive (grand, OK sur fond noir)
+    # En-tête résultat
     st.markdown(
         f"<div class='ct-result-card' style='--card-accent:{c_color};border-color:{c_border};'>"
         f"<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#90caf9;"
@@ -926,7 +945,7 @@ def render_ct_result(res: dict) -> None:
         unsafe_allow_html=True,
     )
 
-    # Barre de confiance — pourcentage en couleur de classe (grand, OK sur fond noir)
+    # Barre de confiance
     st.markdown(
         f"<div class='ct-result-card' style='--card-accent:{c_color};border-color:{c_border};padding:14px 18px;'>"
         f"<div style='display:flex;justify-content:space-between;font-family:Exo 2,sans-serif;"
@@ -946,7 +965,6 @@ def render_ct_result(res: dict) -> None:
     c1, c2, c3 = st.columns(3)
     lbl_style = "font-family:Share Tech Mono,monospace;font-size:10px;color:#90caf9;letter-spacing:1.5px;text-transform:uppercase;margin-top:6px;font-weight:600;"
     with c1:
-        # Confiance : fond neutre bleu navy → texte couleur classe lisible (grand)
         st.markdown(
             f"<div class='ct-result-card' style='text-align:center;--card-accent:{c_color};border-color:{c_border};padding:14px;'>"
             f"<div style='font-family:Orbitron,monospace;font-size:22px;font-weight:900;"
@@ -954,7 +972,6 @@ def render_ct_result(res: dict) -> None:
             f"<div style='{lbl_style}'>Confiance</div></div>", unsafe_allow_html=True,
         )
     with c2:
-        # Urgence : texte blanc sur fond avec bordure colorée pour différencier
         st.markdown(
             f"<div class='ct-result-card' style='text-align:center;--card-accent:{c_color};border-color:{c_border};padding:14px;'>"
             f"<div style='font-family:Exo 2,sans-serif;font-size:13px;font-weight:700;"
@@ -1064,7 +1081,6 @@ tab_scan, tab_chat, tab_sum, tab_mon = st.tabs([
 with tab_scan:
     model, thr, model_err = _load_model(KEYS["MP"], KEYS["TP"])
 
-    # Section upload
     st.markdown("<div class='section-title'>🩻 Import de l'image CT</div>", unsafe_allow_html=True)
 
     col_l, col_r = st.columns([1, 1], gap="large")
@@ -1156,31 +1172,46 @@ with tab_scan:
         with cp:
             st.markdown(
                 "<div class='ct-result-card'>"
-                "<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;"
+                "<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#90caf9;"
                 "letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;"
                 "padding-bottom:10px;border-bottom:1px solid rgba(66,165,245,0.15);'>"
                 "📊 Probabilités par classe</div>",
                 unsafe_allow_html=True,
             )
+
+            # ── CORRECTION BARRES : opacity=1 partout, couleurs toujours visibles ──
             for c, p in sorted(res["probs"].items(), key=lambda x: -x[1]):
                 cc       = CLASS_CFG[c]
-                ip       = c == cls
+                ip       = c == cls          # est-ce la classe prédite ?
                 cc_color = cc["color"]
                 cc_neon  = cc["neon"]
-                cc_bg    = cc["bg"]
                 cc_brd   = cc["border"]
                 cc_emo   = cc["emoji"]
-                nm       = f"color:{cc_color};font-weight:700;" if ip else ""
-                op       = "1.0" if ip else "0.4"
+
+                # Nom de classe : couleur de la classe pour la gagnante, blanc cassé pour les autres
+                nm_class  = "prob-top" if ip else ""
+                # Pourcentage : idem
+                pct_class = "prob-top" if ip else ""
+                # Badge : TOP pour la gagnante, emoji sinon
                 badge_txt = "TOP" if ip else cc_emo
-                row_style = "background:rgba(13,71,161,0.15);border-radius:6px;padding:3px 8px;" if ip else ""
+                # Surbrillance de la ligne gagnante
+                row_style = (
+                    "background:rgba(13,71,161,0.18);border-radius:6px;"
+                    "padding:4px 8px;margin:6px -8px;"
+                ) if ip else "padding:2px 0;"
+
                 p_pct = f"{p*100:.1f}"
                 st.markdown(
                     f"<div class='prob-row' style='{row_style}'>"
-                    f"<div class='prob-name' style='{nm}'>{c}</div>"
-                    f"<div class='prob-track'><div class='prob-fill' style='width:{p_pct}%;background:{cc_color};opacity:{op};box-shadow:0 0 8px {cc_neon};'></div></div>"
-                    f"<div class='prob-pct' style='{nm}'>{p_pct}%</div>"
-                    f"<div class='prob-badge' style='background:{cc_color};color:#ffffff;border:1px solid {cc_brd};opacity:{op};'>{badge_txt}</div>"
+                    f"<div class='prob-name {nm_class}' style='color:{cc_color if ip else \"#c8deff\"};'>{c}</div>"
+                    f"<div class='prob-track'>"
+                    f"<div class='prob-fill' style='width:{p_pct}%;"
+                    f"background:linear-gradient(90deg,{cc_color},{cc_neon});"
+                    f"box-shadow:0 0 8px {cc_neon};'></div>"
+                    f"</div>"
+                    f"<div class='prob-pct {pct_class}' style='color:{cc_color if ip else \"#c8deff\"};'>{p_pct}%</div>"
+                    f"<div class='prob-badge' style='background:{cc_color};color:#ffffff;"
+                    f"border:1px solid {cc_brd};'>{badge_txt}</div>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )
@@ -1190,7 +1221,6 @@ with tab_scan:
             c_color  = cfg["color"]
             c_border = cfg["border"]
             suivi    = CTX[cls]["suivi"]
-            # Rendre le texte INTERP lisible : remplacer <strong> par blanc vif
             interp_html = INTERP[cls].replace(
                 "<strong>", "<strong style='color:#ffffff;font-weight:700;'>"
             )
@@ -1392,7 +1422,6 @@ with tab_sum:
 
             st.markdown("<div class='section-title'>📋 Compte Rendu de Consultation</div>", unsafe_allow_html=True)
 
-            # En-tête compte rendu
             st.markdown(
                 f"<div class='ct-result-card' style='border-color:{c_border};padding:20px;margin-bottom:18px;'>"
                 f"<div style='display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;'>"
@@ -1447,7 +1476,6 @@ with tab_sum:
                     ab = tts(summary["de"], "Allemand 🇩🇪")
                     if ab: st.audio(ab, format="audio/mp3")
 
-            # Export
             ctx_data = CTX[cls]
             export = (
                 f"MEDICALScan AI — COMPTE RENDU · {res['ts']}\n"
