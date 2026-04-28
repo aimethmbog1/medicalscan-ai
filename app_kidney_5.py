@@ -1,28 +1,11 @@
 """
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  MEDICALScan AI  ·  Application Streamlit v9                               ║
+║  MEDICALScan AI  ·  Application Streamlit                                  ║
 ║  Classification CT Rénale  ·  KidneyClassifier v5  ·  AUC 1.00            ║
+║  Style : StockSight AI Design System                                        ║
+║  (dark navy · blueprint canvas · Orbitron · glassmorphism · néons bleus)   ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
-║  Architecture                                                               ║
-║  ══════════                                                                 ║
-║  §1  Imports & configuration de la page                                     ║
-║  §2  Auto-installation TensorFlow (silencieux)                              ║
-║  §3  Secrets API (Groq, LangSmith) — jamais affichés                        ║
-║  §4  Constantes médicales (classes, couleurs, textes)                       ║
-║  §5  Design System CSS                                                      ║
-║  §6  Sidebar — paramètres utilisateur                                       ║
-║  §7  Service LLM — Groq + traces LangSmith                                  ║
-║  §8  Modèle CT — chargement TF et prédiction                                ║
-║  §9  Fonctions utilitaires — TTS, traduction, résumé                        ║
-║  §10 Composant render_ct_result()                                           ║
-║  §11 Header institutionnel                                                  ║
-║  §12 Onglet Analyse CT                                                      ║
-║  §13 Onglet Assistant Médical                                               ║
-║  §14 Onglet Résumé & Rapport                                                ║
-║  §15 Onglet Monitoring LangSmith                                            ║
-║  §16 Footer                                                                 ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║  Groupe 2 · M2 IABD · HAMAD · KAMNO · EFEMBA · MBOG · 2026                ║
+║  Groupe 2 · M2 IABD · HAMAD · KAMNO · EFEMBA · MBOG · 2026               ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 """
 
@@ -47,18 +30,11 @@ st.set_page_config(
 # §2 ── Auto-installation TensorFlow ───────────────────────────────────────────
 @st.cache_resource(show_spinner=False)
 def _try_tensorflow() -> bool:
-    """
-    Tente d'importer TensorFlow.
-    Si absent, essaie de l'installer silencieusement (cascade de versions).
-    Retourne True si disponible, False sinon (→ mode démo).
-    Compatible Python 3.11 (local) et Python 3.14 (Streamlit Cloud → mode démo).
-    """
     try:
         import tensorflow  # noqa: F401
         return True
     except ImportError:
         pass
-
     for pkg in [
         "tensorflow-cpu==2.16.1",
         "tensorflow-cpu>=2.13.0,<2.17.0",
@@ -80,17 +56,12 @@ TF_OK: bool = _try_tensorflow()
 
 # §3 ── Secrets API ────────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner=False)
-def _load_secrets() -> dict[str, str]:
-    """
-    Charge les clés depuis .streamlit/secrets.toml avec fallback sur les
-    variables d'environnement. Les valeurs ne sont JAMAIS affichées dans l'UI.
-    """
+def _load_secrets() -> dict:
     def _get(key: str) -> str:
         try:
             return st.secrets.get(key, os.environ.get(key, ""))
         except Exception:
             return os.environ.get(key, "")
-
     return {
         "GROQ":  _get("GROQ_API_KEY"),
         "LS":    _get("LANGCHAIN_API_KEY"),
@@ -100,46 +71,36 @@ def _load_secrets() -> dict[str, str]:
     }
 
 
-KEYS: dict[str, str] = _load_secrets()
+KEYS: dict = _load_secrets()
 
 # §4 ── Constantes médicales ───────────────────────────────────────────────────
+CLASSES: tuple = ("Cyst", "Normal", "Stone", "Tumor")
+IMG_SIZE: tuple = (160, 160)
 
-# Ordre des classes (doit correspondre à l'entraînement du modèle)
-CLASSES: tuple[str, ...] = ("Cyst", "Normal", "Stone", "Tumor")
-
-# Taille d'entrée attendue par le modèle
-IMG_SIZE: tuple[int, int] = (160, 160)
-
-# Palette et métadonnées par classe
-CLASS_CFG: dict[str, dict] = {
+CLASS_CFG: dict = {
     "Cyst": {
-        "color": "#1B5EA8", "bg": "#EBF5FB", "border": "#85C1E9",
-        "label": "Kyste rénal",              "urgence": "Faible",    "emoji": "💧",
+        "color": "#42a5f5", "bg": "rgba(13,71,161,0.22)", "border": "rgba(66,165,245,0.4)",
+        "label": "Kyste rénal", "urgence": "Faible", "emoji": "💧",
+        "neon": "rgba(66,165,245,0.6)",
     },
     "Normal": {
-        "color": "#1A7A4A", "bg": "#F0FBF4", "border": "#82D0A0",
-        "label": "Rein normal",              "urgence": "Aucune",    "emoji": "✅",
+        "color": "#00e676", "bg": "rgba(0,100,50,0.22)", "border": "rgba(0,230,118,0.4)",
+        "label": "Rein normal", "urgence": "Aucune", "emoji": "✅",
+        "neon": "rgba(0,230,118,0.6)",
     },
     "Stone": {
-        "color": "#C4700A", "bg": "#FDF8F0", "border": "#E8C97A",
-        "label": "Lithiase rénale (calcul)", "urgence": "Modérée",   "emoji": "🪨",
+        "color": "#ff9800", "bg": "rgba(100,60,0,0.22)", "border": "rgba(255,152,0,0.4)",
+        "label": "Lithiase rénale (calcul)", "urgence": "Modérée", "emoji": "🪨",
+        "neon": "rgba(255,152,0,0.6)",
     },
     "Tumor": {
-        "color": "#C0392B", "bg": "#FDF2F2", "border": "#E8A0A0",
-        "label": "Tumeur rénale",            "urgence": "Élevée ⚠️", "emoji": "🔴",
+        "color": "#ff5252", "bg": "rgba(120,0,0,0.22)", "border": "rgba(255,82,82,0.4)",
+        "label": "Tumeur rénale", "urgence": "Élevée ⚠️", "emoji": "🔴",
+        "neon": "rgba(255,82,82,0.6)",
     },
 }
 
-# Couleur associée à chaque niveau d'urgence (pour les métriques)
-URGENCE_COLOR: dict[str, str] = {
-    "Aucune":    "#1A7A4A",
-    "Faible":    "#1B5EA8",
-    "Modérée":   "#C4700A",
-    "Élevée ⚠️": "#C0392B",
-}
-
-# Textes d'interprétation clinique (HTML inline autorisé)
-INTERP: dict[str, str] = {
+INTERP: dict = {
     "Normal": (
         "L'analyse ne révèle <strong>aucune anomalie rénale significative</strong>. "
         "Les structures rénales apparaissent morphologiquement normales. "
@@ -165,304 +126,631 @@ INTERP: dict[str, str] = {
     ),
 }
 
-# Contexte clinique utilisé dans les prompts LLM et l'export PDF/texte
-CTX: dict[str, dict[str, str]] = {
+CTX: dict = {
     "Cyst":   {"urgence": "Faible à modérée",                    "suivi": "Échographie à 6-12 mois"},
     "Normal": {"urgence": "Aucune",                               "suivi": "Contrôle de routine"},
     "Stone":  {"urgence": "Modérée — selon taille/localisation", "suivi": "Consultation urologique"},
-    "Tumor":  {"urgence": "⚠️ ÉLEVÉE — consultation urgente",     "suivi": "IRM + avis urologique urgent"},
+    "Tumor":  {"urgence": "⚠️ ÉLEVÉE — consultation urgente",    "suivi": "IRM + avis urologique urgent"},
 }
 
-# §5 ── Design System CSS ──────────────────────────────────────────────────────
-# Palette clinique :
-#   Fond         #F2F5F8  (gris chirurgical)
-#   Surface      #FFFFFF  (blanc)
-#   Bleu médical #1B4F72  (accent principal)
-#   Bordure      #D8E2EC  (séparateurs discrets)
-#   Alertes      rouge · orange · bleu · vert (code RAG standard)
-# Typographie :
-#   DM Sans      corps de texte — lisibilité clinique
-#   JetBrains Mono  valeurs numériques, codes, timestamps
-
+# §5 ── Design System CSS (StockSight Style) ───────────────────────────────────
 _CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&family=Share+Tech+Mono&display=swap');
 
-/* ── Base ────────────────────────────────────────────────── */
-*, html, body { font-family: 'DM Sans', sans-serif !important; box-sizing: border-box; }
-[data-testid="stAppViewContainer"]  { background: #F2F5F8 !important; color: #1A2332 !important; }
-[data-testid="stHeader"]            { display: none !important; }
-[data-testid="stStatusWidget"]      { display: none !important; }
-div[data-testid="stDecoration"]     { display: none !important; }
-div[data-stale="true"]              { opacity: 1 !important; }
-.block-container                    { padding: 0 !important; max-width: 100% !important; }
+/* ── Base reset ── */
+html, body {
+    margin: 0; padding: 0;
+    background: #020818 !important;
+    font-family: 'Exo 2', sans-serif;
+    color: #e0eaff;
+}
+[data-testid="stAppViewContainer"] {
+    background: transparent !important;
+    position: relative; z-index: 1;
+}
+[data-testid="stHeader"] {
+    background: rgba(2,8,24,0.85) !important;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(66,165,245,0.15);
+    z-index: 100;
+}
+[data-testid="stMain"] { background: transparent !important; }
+.main .block-container { background: transparent !important; padding-top: 2rem; }
 
-/* ── Sidebar ─────────────────────────────────────────────── */
-[data-testid="stSidebar"] > div {
-    background: #FFFFFF !important;
-    border-right: 1px solid #D8E2EC !important;
-    padding-top: 0 !important;
+/* ── Sidebar ── */
+section[data-testid="stSidebar"] {
+    background: rgba(2,8,24,0.92) !important;
+    backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(66,165,245,0.2) !important;
+    box-shadow: 4px 0 40px rgba(0,0,0,0.5);
+    z-index: 50;
+    max-height: 100vh;
+    overflow-y: auto; overflow-x: hidden;
+    padding-right: 6px;
 }
+section[data-testid="stSidebar"]::-webkit-scrollbar { width: 8px; }
+section[data-testid="stSidebar"]::-webkit-scrollbar-track { background: rgba(2,8,24,0.5); }
+section[data-testid="stSidebar"]::-webkit-scrollbar-thumb {
+    background: rgba(66,165,245,0.4); border-radius: 999px;
+}
+section[data-testid="stSidebar"]::-webkit-scrollbar-thumb:hover { background: rgba(66,165,245,0.65); }
+[data-testid="stSidebar"] * { color: #c8deff !important; }
+[data-testid="stSidebar"] .stButton > button { color: white !important; }
 
-/* ── Header ──────────────────────────────────────────────── */
-.med-header {
-    background: linear-gradient(135deg, #0F2540 0%, #1B4F72 55%, #1E6CA0 100%);
-    padding: 16px 32px;
-    display: flex; align-items: center; justify-content: space-between;
-    border-bottom: 3px solid #0A1E35;
-    box-shadow: 0 3px 14px rgba(0,0,0,0.20);
-}
-.med-header-left  { display: flex; align-items: center; gap: 14px; }
-.med-logo-box {
-    width: 44px; height: 44px; border-radius: 10px;
-    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22);
-    display: flex; align-items: center; justify-content: center; font-size: 21px; flex-shrink: 0;
-}
-.med-title    { font-size: 1.3rem; font-weight: 700; color: #FFF; margin: 0; line-height: 1.2; }
-.med-subtitle { font-size: 0.63rem; color: rgba(255,255,255,0.55); letter-spacing: 1.8px; text-transform: uppercase; margin-top: 3px; }
-.med-header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.hbadge {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.57rem; padding: 4px 10px;
-    border-radius: 4px; border: 1px solid rgba(255,255,255,0.20);
-    color: rgba(255,255,255,0.70); background: rgba(255,255,255,0.07); letter-spacing: 0.4px;
-}
-.hbadge.on { border-color: #4ADE80; color: #4ADE80; background: rgba(74,222,128,0.08); }
-
-/* ── Onglets ─────────────────────────────────────────────── */
-[data-testid="stTabs"] [role="tablist"] {
-    background: #FFFFFF !important; border-bottom: 2px solid #D8E2EC !important;
-    padding: 0 28px !important; gap: 0 !important; margin-bottom: 0 !important;
-}
-[data-testid="stTabs"] [role="tab"] {
-    font-family: 'DM Sans', sans-serif !important; font-size: 0.79rem !important;
-    font-weight: 500 !important; color: #6B8499 !important; background: transparent !important;
-    border: none !important; padding: 13px 20px !important;
-    border-bottom: 3px solid transparent !important; margin-bottom: -2px !important;
-}
-[data-testid="stTabs"] [role="tab"][aria-selected="true"] {
-    color: #1B4F72 !important; border-bottom: 3px solid #1B4F72 !important; font-weight: 600 !important;
-}
-[data-testid="stTabs"] [role="tab"]:hover { color: #1B4F72 !important; background: #EDF3F8 !important; }
-[data-testid="stTabsContent"] { padding: 24px 28px !important; background: #F2F5F8 !important; }
-
-/* ── Carte générique ─────────────────────────────────────── */
-.card {
-    background: #FFFFFF; border: 1px solid #D8E2EC; border-radius: 10px;
-    padding: 20px 22px; box-shadow: 0 1px 5px rgba(0,0,0,0.05); margin-bottom: 14px;
-}
-.card-title {
-    font-size: 0.64rem; font-weight: 600; color: #6B8499; letter-spacing: 1.4px;
-    text-transform: uppercase; margin-bottom: 14px; padding-bottom: 10px;
-    border-bottom: 1px solid #EEF3F7; display: flex; align-items: center; gap: 7px;
+/* ── Panneaux glassmorphism ── */
+[data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
+    background: rgba(4,15,40,0.55);
+    backdrop-filter: blur(8px);
+    border-radius: 16px;
 }
 
-/* ── Upload ──────────────────────────────────────────────── */
+/* ── Onglets ── */
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+    gap: 4px;
+    background: rgba(2,8,24,0.75);
+    backdrop-filter: blur(16px);
+    border-radius: 14px; padding: 6px;
+    border: 1px solid rgba(66,165,245,0.2);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+[data-testid="stTabs"] [data-baseweb="tab"] {
+    border-radius: 10px; padding: 10px 22px;
+    font-family: 'Exo 2', sans-serif; font-weight: 700;
+    font-size: 13px; letter-spacing: 0.5px;
+    color: #5a8fbf !important; border: none !important;
+    transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+    background: transparent !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab"]:hover {
+    color: #90caf9 !important;
+    background: rgba(13,71,161,0.2) !important;
+}
+[data-testid="stTabs"] [aria-selected="true"] {
+    background: linear-gradient(135deg,#0d47a1 0%,#1565c0 50%,#1e88e5 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 24px rgba(21,101,192,0.6), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+/* ── Boutons ── */
+.stButton > button {
+    background: linear-gradient(135deg,#0a2a5e 0%,#0d47a1 40%,#1976d2 80%,#42a5f5 100%);
+    color: white !important;
+    border: 1px solid rgba(66,165,245,0.4) !important;
+    border-radius: 12px; padding: 12px 32px;
+    font-family: 'Exo 2', sans-serif; font-weight: 700;
+    font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase;
+    box-shadow: 0 0 30px rgba(13,71,161,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    position: relative; overflow: hidden;
+}
+.stButton > button::before {
+    content: ''; position: absolute;
+    top: 0; left: -100%; width: 100%; height: 100%;
+    background: linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent);
+    transition: left 0.5s ease;
+}
+.stButton > button:hover::before { left: 100%; }
+.stButton > button:hover {
+    box-shadow: 0 0 50px rgba(66,165,245,0.7), 0 0 100px rgba(66,165,245,0.2);
+    transform: translateY(-3px) scale(1.02);
+    border-color: rgba(66,165,245,0.8) !important;
+}
+.stButton > button:active { transform: translateY(-1px); }
+
+/* ── Métriques ── */
+[data-testid="metric-container"] {
+    background: linear-gradient(135deg,rgba(13,71,161,0.22) 0%,rgba(5,20,50,0.7) 100%);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(66,165,245,0.25);
+    border-radius: 14px; padding: 18px 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+[data-testid="metric-container"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(13,71,161,0.4), 0 0 30px rgba(66,165,245,0.15);
+}
+[data-testid="metric-container"] label {
+    color: #5a8fbf !important; font-size: 11px !important;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    font-family: 'Share Tech Mono', monospace !important;
+}
+[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    color: #42a5f5 !important;
+    font-family: 'Orbitron', monospace !important;
+    font-size: 20px !important; font-weight: 700;
+    text-shadow: 0 0 20px rgba(66,165,245,0.5);
+}
+[data-testid="stMetricDelta"] { font-size: 12px !important; }
+
+/* ── Inputs / Selects ── */
+.stSelectbox > div > div,
+.stMultiSelect > div > div {
+    background: rgba(4,14,38,0.85) !important;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(66,165,245,0.25) !important;
+    border-radius: 10px !important; color: #c8deff !important;
+    transition: border-color 0.3s;
+}
+.stSelectbox > div > div:focus-within,
+.stMultiSelect > div > div:focus-within {
+    border-color: rgba(66,165,245,0.6) !important;
+    box-shadow: 0 0 15px rgba(66,165,245,0.2) !important;
+}
+.stSlider [data-baseweb="thumb"] {
+    background: linear-gradient(135deg,#1565c0,#42a5f5) !important;
+    box-shadow: 0 0 12px rgba(66,165,245,0.6) !important;
+}
+.stSlider [data-baseweb="track-fill"] {
+    background: linear-gradient(90deg,#0d47a1,#42a5f5) !important;
+}
+.stRadio > div label { color: #8aabcc !important; }
+.stRadio > div [aria-checked="true"] { color: #42a5f5 !important; }
+
+/* ── Expander ── */
+.streamlit-expanderHeader, [data-testid="stExpander"] summary {
+    background: rgba(13,71,161,0.18) !important;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(66,165,245,0.2) !important;
+    border-radius: 10px !important; color: #7aabd4 !important;
+    font-weight: 600; font-family: 'Exo 2', sans-serif;
+    transition: all 0.3s;
+}
+.streamlit-expanderHeader:hover { background: rgba(13,71,161,0.3) !important; }
+
+/* ── Dataframe ── */
+[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
+[data-testid="stDataFrame"] thead th {
+    background: rgba(13,71,161,0.4) !important;
+    color: #42a5f5 !important;
+    font-family: 'Exo 2', sans-serif; font-weight: 700; letter-spacing: 0.5px;
+}
+
+/* ── Alertes ── */
+[data-testid="stAlert"] {
+    border-radius: 12px !important;
+    backdrop-filter: blur(8px);
+    border-left-width: 4px !important;
+}
+
+/* ── File uploader ── */
 [data-testid="stFileUploaderDropzone"] {
-    background: #F8FAFB !important; border: 1.5px dashed #B8CAD8 !important;
-    border-radius: 12px !important; padding: 30px 20px !important;
-    transition: border-color .18s, background .18s !important;
+    background: rgba(4,14,38,0.6) !important;
+    border: 1.5px dashed rgba(66,165,245,0.4) !important;
+    border-radius: 14px !important;
+    transition: border-color .2s, background .2s !important;
 }
 [data-testid="stFileUploaderDropzone"]:hover {
-    border-color: #1B4F72 !important; background: #EBF3FA !important;
+    border-color: rgba(66,165,245,0.8) !important;
+    background: rgba(13,71,161,0.15) !important;
 }
-[data-testid="stFileUploaderDropzone"] > div    { gap: 10px !important; flex-direction: column !important; align-items: center !important; }
-[data-testid="stFileUploaderDropzone"] > div > span { font-size: 0.81rem !important; font-weight: 500 !important; color: #1A2332 !important; }
-[data-testid="stFileUploaderDropzone"] small    { font-size: 0.70rem !important; color: #7F8C8D !important; }
+[data-testid="stFileUploaderDropzone"] > div span {
+    color: #c8deff !important; font-family: 'Exo 2', sans-serif !important;
+}
 [data-testid="stFileUploaderDropzone"] button,
 [data-testid="stFileUploader"] button {
-    font-family: 'DM Sans', sans-serif !important; font-size: 0.80rem !important;
-    font-weight: 600 !important; letter-spacing: 0.2px !important; text-transform: none !important;
-    background: #1B4F72 !important; color: #FFF !important; border: none !important;
-    border-radius: 8px !important; padding: 9px 22px !important; margin-top: 8px !important;
-    cursor: pointer !important; box-shadow: 0 2px 6px rgba(27,79,114,0.22) !important;
-    transition: background .15s, box-shadow .15s !important;
-}
-[data-testid="stFileUploaderDropzone"] button:hover,
-[data-testid="stFileUploader"] button:hover {
-    background: #154360 !important; box-shadow: 0 4px 12px rgba(27,79,114,0.30) !important;
+    background: linear-gradient(135deg,#0d47a1,#1976d2) !important;
+    color: white !important; border: none !important;
+    border-radius: 8px !important; font-family: 'Exo 2', sans-serif !important;
+    font-weight: 700 !important; letter-spacing: 1px !important;
 }
 [data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] {
-    background: #EBF3FA !important; border: 1px solid #AECDE8 !important; border-radius: 8px !important; padding: 10px 14px !important;
+    background: rgba(13,71,161,0.2) !important;
+    border: 1px solid rgba(66,165,245,0.3) !important;
+    border-radius: 8px !important;
 }
 [data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] span {
-    font-size: 0.78rem !important; color: #0C4472 !important; font-weight: 500 !important;
+    color: #90caf9 !important;
 }
 
-/* ── Blocs résultat CT ───────────────────────────────────── */
-.res-head { background:#FFF; border:1px solid #D8E2EC; border-radius:10px 10px 0 0; padding:18px 22px 14px; box-shadow:0 1px 5px rgba(0,0,0,.04); }
-.res-bar  { background:#FFF; border:1px solid #D8E2EC; border-top:none; padding:0 22px 14px; box-shadow:0 1px 5px rgba(0,0,0,.04); }
-.res-met  { background:#FFF; border:1px solid #D8E2EC; border-top:none; border-radius:0 0 10px 10px; padding:12px 22px 18px; box-shadow:0 1px 5px rgba(0,0,0,.04); margin-bottom:12px; }
-.mc { background:#F8FAFB; border:1px solid #D8E2EC; border-radius:8px; padding:11px 12px; text-align:center; }
-.mv { font-family:'JetBrains Mono',monospace; font-size:1.3rem; font-weight:700; }
-.ml { font-size:0.57rem; color:#7F8C8D; text-transform:uppercase; letter-spacing:1px; margin-top:3px; }
-
-/* ── Alertes RAG ─────────────────────────────────────────── */
-.al { border-radius:8px; padding:11px 15px; margin:10px 0; }
-.al-t { font-size:0.79rem; font-weight:700; display:flex; align-items:center; gap:6px; margin-bottom:3px; }
-.al-b { font-size:0.75rem; }
-.al-r { background:#FDF2F2; border:1px solid #E8A0A0; border-left:4px solid #C0392B; }
-.al-r .al-t { color:#C0392B; } .al-r .al-b { color:#7B3333; }
-.al-o { background:#FDF8F0; border:1px solid #E8C97A; border-left:4px solid #C4700A; }
-.al-o .al-t { color:#C4700A; } .al-o .al-b { color:#7A4A1A; }
-.al-b2{ background:#F0F7FD; border:1px solid #85C1E9; border-left:4px solid #1B5EA8; }
-.al-b2 .al-t{ color:#1B5EA8; } .al-b2 .al-b{ color:#1A4A7A; }
-.al-g { background:#F0FBF4; border:1px solid #82D0A0; border-left:4px solid #1A7A4A; }
-.al-g .al-t { color:#1A7A4A; } .al-g .al-b { color:#1A5A35; }
-
-/* ── Probabilités ────────────────────────────────────────── */
-.pr  { display:flex; align-items:center; gap:10px; margin:7px 0; }
-.pn  { font-size:0.73rem; font-weight:500; color:#3D5266; width:54px; flex-shrink:0; }
-.pt  { flex:1; height:8px; background:#EEF3F7; border-radius:4px; overflow:hidden; }
-.pf  { height:100%; border-radius:4px; }
-.pp  { font-family:'JetBrains Mono',monospace; font-size:0.70rem; color:#3D5266; width:42px; text-align:right; flex-shrink:0; }
-.pb  { font-size:0.55rem; font-weight:600; padding:2px 7px; border-radius:10px; width:44px; text-align:center; flex-shrink:0; }
-
-/* ── Interprétation ──────────────────────────────────────── */
-.ic { background:#FFF; border:1px solid #D8E2EC; border-radius:10px; padding:18px 20px; box-shadow:0 1px 5px rgba(0,0,0,.04); }
-.it { font-size:0.64rem; font-weight:600; color:#6B8499; letter-spacing:1.4px; text-transform:uppercase; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid #EEF3F7; }
-.ix { font-size:0.83rem; color:#2C3E50; line-height:1.72; }
-.ix strong { color:#1B4F72; }
-
-/* ── Chat ────────────────────────────────────────────────── */
-.ctx-bar {
-    background:#FFF; border:1px solid #D8E2EC; border-left:4px solid #1B4F72;
-    border-radius:8px; padding:10px 15px; margin-bottom:14px;
-    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;
-}
+/* ── Chat ── */
 .stChatMessage {
-    background:#FFF !important; border:1px solid #D8E2EC !important; border-radius:10px !important;
-    padding:12px 16px !important; margin-bottom:8px !important; box-shadow:0 1px 4px rgba(0,0,0,.04) !important;
+    background: rgba(4,15,40,0.7) !important;
+    border: 1px solid rgba(66,165,245,0.2) !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(8px) !important;
 }
 
-/* ── Traduction 🇩🇪 ───────────────────────────────────────── */
-.de { background:#FFFDF0; border:1px solid #EEE070; border-left:3px solid #C8A800; border-radius:8px; padding:9px 13px; margin-top:6px; }
-.de-t { font-size:0.57rem; font-weight:600; color:#A0820A; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px; }
-.de-b { font-size:0.80rem; color:#3D3000; line-height:1.6; }
-
-/* ── Audio ───────────────────────────────────────────────── */
-.au { background:#F6F0FF; border:1px solid #C8A8F0; border-left:3px solid #7B2FBE; border-radius:8px; padding:7px 12px; margin-top:6px; }
-.au-t { font-size:0.57rem; font-weight:600; color:#6A1FA0; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px; }
-
-/* ── Trace LangSmith ─────────────────────────────────────── */
-.tr {
-    background:#F0FBF0; border:1px solid #A8DFA8; border-left:3px solid #1A7A4A;
-    border-radius:8px; padding:7px 12px; margin-top:6px;
-    font-family:'JetBrains Mono',monospace; font-size:0.65rem; display:flex; gap:16px; flex-wrap:wrap;
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: rgba(2,8,24,0.5); }
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg,#0d47a1,#42a5f5);
+    border-radius: 3px; box-shadow: 0 0 8px rgba(66,165,245,0.4);
 }
-.tr-i { color:#5D7A5D; }
-.tr-i span { color:#1A4A2A; font-weight:600; }
 
-/* ── Monitoring ──────────────────────────────────────────── */
-.mn { background:#FFF; border:1px solid #D8E2EC; border-radius:10px; padding:16px; text-align:center; box-shadow:0 1px 5px rgba(0,0,0,.04); }
-.mn-v { font-size:1.4rem; font-weight:700; color:#1B4F72; font-family:'JetBrains Mono',monospace; }
-.mn-l { font-size:0.58rem; color:#7F8C8D; text-transform:uppercase; letter-spacing:1px; margin-top:3px; }
+/* ══════════════════════════════════════
+   COMPOSANTS PERSONNALISÉS STOCKSIGHT
+══════════════════════════════════════ */
 
-/* ── Résumé ──────────────────────────────────────────────── */
-.su-fr { background:#FFF; border:1px solid #D8E2EC; border-radius:10px; padding:18px; box-shadow:0 1px 5px rgba(0,0,0,.04); }
-.su-de { background:#FFFEF5; border:1px solid #E4D060; border-top:3px solid #C8A800; border-radius:10px; padding:18px; box-shadow:0 1px 5px rgba(0,0,0,.04); }
-.su-l  { font-size:0.60rem; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #EEF3F7; }
-
-/* ── Sidebar ─────────────────────────────────────────────── */
-.sb-s  { font-size:0.60rem; font-weight:600; color:#7F8C8D; letter-spacing:1.5px; text-transform:uppercase; margin:14px 0 5px; }
-.pill  { font-size:0.58rem; padding:3px 9px; border-radius:4px; font-weight:500; }
-.p-ok  { background:#F0FBF4; border:1px solid #82D0A0; color:#1A7A4A; }
-.p-no  { background:#FDF2F2; border:1px solid #E8A0A0; color:#C0392B; }
-.ext-a { display:block; padding:9px 12px; background:linear-gradient(135deg,#1B4F72,#1E6CA0); color:#FFF !important; border-radius:8px; text-align:center; font-size:0.74rem; font-weight:600; text-decoration:none; margin:6px 0; }
-
-/* ── Boutons ─────────────────────────────────────────────── */
-.stButton > button {
-    font-family:'DM Sans',sans-serif !important; font-size:0.75rem !important;
-    font-weight:500 !important; background:#1B4F72 !important; color:#FFF !important;
-    border:none !important; border-radius:7px !important; padding:7px 16px !important;
-    transition:background .15s !important;
+/* Titre de section */
+.section-title {
+    font-family: 'Orbitron', monospace; font-size: 20px; font-weight: 700;
+    background: linear-gradient(90deg,#42a5f5,#7c4dff,#00b4d8,#42a5f5);
+    background-size: 300% auto;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    animation: shimmer 4s linear infinite;
+    margin: 24px 0 18px;
+    display: flex; align-items: center; gap: 10px;
 }
-.stButton > button:hover { background:#154360 !important; }
+.section-title::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg,rgba(66,165,245,0.4),transparent);
+    margin-left: 12px; display: block;
+    -webkit-background-clip: unset; -webkit-text-fill-color: unset;
+}
 
-/* ── Metrics Streamlit ───────────────────────────────────── */
-[data-testid="stMetric"]      { background:#FFF !important; border:1px solid #D8E2EC !important; border-radius:8px !important; padding:12px !important; }
-[data-testid="stMetricLabel"] { font-size:0.60rem !important; color:#7F8C8D !important; text-transform:uppercase !important; letter-spacing:1px !important; }
-[data-testid="stMetricValue"] { font-size:1.25rem !important; color:#1A2332 !important; font-weight:700 !important; }
+/* Hero card */
+.hero-card {
+    background: linear-gradient(145deg,rgba(13,71,161,0.28) 0%,rgba(5,20,60,0.65) 50%,rgba(13,71,161,0.15) 100%);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(66,165,245,0.22); border-radius: 20px;
+    padding: 28px 22px; text-align: center;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+    transition: transform 0.4s cubic-bezier(0.4,0,0.2,1), box-shadow 0.4s, border-color 0.4s;
+    height: 100%; position: relative; overflow: hidden;
+}
+.hero-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg,transparent,rgba(66,165,245,0.5),transparent);
+}
+.hero-card:hover {
+    transform: translateY(-6px) scale(1.01);
+    box-shadow: 0 24px 60px rgba(13,71,161,0.5), 0 0 0 1px rgba(66,165,245,0.25);
+    border-color: rgba(66,165,245,0.45);
+}
+.hero-card .icon { font-size: 36px; margin-bottom: 10px; display: block; }
+.hero-card h3 {
+    color: #42a5f5; font-family: 'Orbitron', monospace; font-size: 13px;
+    letter-spacing: 1px; margin: 0 0 8px;
+}
+.hero-card p { color: #6a90b4; font-size: 13px; line-height: 1.6; margin: 0; }
 
-/* ── Divider de section ──────────────────────────────────── */
-.sdiv { display:flex; align-items:center; gap:10px; margin:20px 0 14px; }
-.sdiv-l { flex:1; height:1px; background:#D8E2EC; }
-.sdiv-t { font-size:0.62rem; font-weight:600; color:#7F8C8D; letter-spacing:1.5px; text-transform:uppercase; white-space:nowrap; }
+/* Carte résultat CT */
+.ct-result-card {
+    background: linear-gradient(145deg,rgba(4,14,38,0.85) 0%,rgba(13,71,161,0.18) 100%);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(66,165,245,0.2); border-radius: 16px;
+    padding: 20px 18px; margin-bottom: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+    transition: transform 0.3s ease;
+    position: relative; overflow: hidden;
+}
+.ct-result-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg,transparent,var(--card-accent,#42a5f5),transparent);
+}
 
-/* ── Footer ──────────────────────────────────────────────── */
+/* Barre de probabilité */
+.prob-row { display:flex; align-items:center; gap:10px; margin:8px 0; }
+.prob-name {
+    font-family:'Share Tech Mono',monospace; font-size:12px;
+    color:#c8deff; width:60px; flex-shrink:0; letter-spacing:0.5px;
+}
+.prob-track { flex:1; height:8px; background:rgba(13,71,161,0.2); border-radius:4px; overflow:hidden; border:1px solid rgba(66,165,245,0.15); }
+.prob-fill  { height:100%; border-radius:4px; transition: width 0.8s ease; }
+.prob-pct   { font-family:'Share Tech Mono',monospace; font-size:11px; color:#7aabd4; width:42px; text-align:right; flex-shrink:0; }
+.prob-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; width:48px; text-align:center; flex-shrink:0; font-family:'Share Tech Mono',monospace; }
+
+/* Alerte RAG dark */
+.al { border-radius:10px; padding:12px 16px; margin:10px 0; backdrop-filter:blur(8px); }
+.al-t { font-family:'Exo 2',sans-serif; font-size:13px; font-weight:700; display:flex; align-items:center; gap:7px; margin-bottom:4px; letter-spacing:0.3px; }
+.al-b { font-size:12px; line-height:1.6; }
+.al-r { background:rgba(120,0,0,0.3); border:1px solid rgba(255,82,82,0.4); border-left:3px solid #ff5252; }
+.al-r .al-t { color:#ff5252; } .al-r .al-b { color:#ffaaaa; }
+.al-o { background:rgba(100,50,0,0.3); border:1px solid rgba(255,152,0,0.4); border-left:3px solid #ff9800; }
+.al-o .al-t { color:#ff9800; } .al-o .al-b { color:#ffcc80; }
+.al-b2{ background:rgba(13,71,161,0.3); border:1px solid rgba(66,165,245,0.4); border-left:3px solid #42a5f5; }
+.al-b2 .al-t{ color:#42a5f5; } .al-b2 .al-b{ color:#90caf9; }
+.al-g { background:rgba(0,80,40,0.3); border:1px solid rgba(0,230,118,0.4); border-left:3px solid #00e676; }
+.al-g .al-t { color:#00e676; } .al-g .al-b { color:#69f0ae; }
+
+/* Boîte info */
+.info-box {
+    background: linear-gradient(135deg,rgba(13,71,161,0.18) 0%,rgba(5,20,50,0.6) 100%);
+    backdrop-filter: blur(8px);
+    border-left: 3px solid #42a5f5; border-radius: 0 12px 12px 0;
+    padding: 14px 18px; margin: 14px 0;
+    font-size: 13px; color: #8aabcc;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    line-height: 1.65;
+}
+.info-box strong { color: #90caf9; }
+
+/* Carte sidebar */
+.sb-card {
+    background: linear-gradient(135deg,rgba(13,71,161,0.3) 0%,rgba(5,20,50,0.75) 100%);
+    border: 1px solid rgba(66,165,245,0.25); border-radius: 12px;
+    padding: 14px 16px; margin: 8px 0; position: relative; overflow: hidden;
+}
+.sb-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg,#0d47a1,#42a5f5,#7c4dff);
+}
+
+/* Pill */
+.pill { font-size:11px; padding:3px 10px; border-radius:10px; font-weight:600; font-family:'Share Tech Mono',monospace; }
+.pill-ok  { background:rgba(0,80,40,0.4); border:1px solid rgba(0,230,118,0.4); color:#00e676; }
+.pill-no  { background:rgba(120,0,0,0.3); border:1px solid rgba(255,82,82,0.4); color:#ff5252; }
+
+/* Trace LangSmith */
+.trace-bar {
+    background: rgba(0,80,40,0.2); border:1px solid rgba(0,230,118,0.3); border-left:3px solid #00e676;
+    border-radius:8px; padding:8px 12px; margin-top:8px;
+    font-family:'Share Tech Mono',monospace; font-size:11px;
+    display:flex; gap:16px; flex-wrap:wrap; color:#69f0ae;
+}
+.trace-bar span { color:#00e676; font-weight:700; }
+
+/* Traduction */
+.de-box { background:rgba(100,80,0,0.25); border:1px solid rgba(255,193,7,0.3); border-left:3px solid #ffc107; border-radius:8px; padding:10px 14px; margin-top:8px; }
+.de-box .de-t { font-size:10px; font-weight:700; color:#ffc107; letter-spacing:1.5px; text-transform:uppercase; font-family:'Share Tech Mono',monospace; margin-bottom:6px; }
+.de-box .de-b { font-size:13px; color:#ffe082; line-height:1.65; }
+
+/* Audio */
+.audio-box { background:rgba(80,0,120,0.25); border:1px solid rgba(179,136,255,0.3); border-left:3px solid #b388ff; border-radius:8px; padding:7px 12px; margin-top:8px; }
+.audio-box .au-t { font-size:10px; font-weight:700; color:#b388ff; letter-spacing:1.5px; text-transform:uppercase; font-family:'Share Tech Mono',monospace; margin-bottom:4px; }
+
+/* Résumé */
+.sum-card {
+    background: linear-gradient(145deg,rgba(4,14,38,0.85) 0%,rgba(13,71,161,0.18) 100%);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(66,165,245,0.22); border-radius: 16px;
+    padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.sum-de-card {
+    background: linear-gradient(145deg,rgba(60,40,0,0.7) 0%,rgba(100,70,0,0.4) 100%);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,193,7,0.3); border-radius: 16px;
+    padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.sum-label {
+    font-family:'Orbitron',monospace; font-size:11px; font-weight:700;
+    letter-spacing:2px; text-transform:uppercase; margin-bottom:12px;
+    padding-bottom:8px; border-bottom:1px solid rgba(66,165,245,0.2);
+}
+.sum-body { font-family:'Exo 2',sans-serif; font-size:13px; color:#c8deff; line-height:1.75; }
+
+/* Monitoring */
+.mon-card {
+    background: linear-gradient(145deg,rgba(4,14,38,0.85) 0%,rgba(13,71,161,0.18) 100%);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(66,165,245,0.2); border-radius: 14px;
+    padding: 16px; text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.mon-val {
+    font-family:'Orbitron',monospace; font-size:22px; font-weight:700;
+    color:#42a5f5; text-shadow:0 0 20px rgba(66,165,245,0.5); margin-bottom:4px;
+}
+.mon-lbl { font-family:'Share Tech Mono',monospace; font-size:10px; color:#5a8fbf; letter-spacing:1.5px; text-transform:uppercase; }
+
+/* Titre hero */
+.hero-title {
+    font-family: 'Orbitron', monospace; font-size: 48px; font-weight: 900;
+    background: linear-gradient(90deg,#0d47a1,#42a5f5,#7c4dff,#00b4d8,#42a5f5,#0d47a1);
+    background-size: 400% auto;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    animation: shimmer 5s linear infinite;
+    text-align: center; line-height: 1.05; margin-bottom: 6px;
+    filter: drop-shadow(0 0 30px rgba(66,165,245,0.4));
+}
+.hero-subtitle {
+    color: #5a8fbf; text-align: center; font-size: 11px;
+    letter-spacing: 5px; text-transform: uppercase; margin-bottom: 8px;
+    font-family: 'Share Tech Mono', monospace;
+}
+.hero-tagline {
+    text-align: center; color: #7aabd4; font-size: 14px;
+    line-height: 1.7; max-width: 640px; margin: 0 auto 32px;
+}
+
+/* Séparateur */
+.glow-divider {
+    height: 1px;
+    background: linear-gradient(90deg,transparent 0%,rgba(13,71,161,0.5) 15%,rgba(66,165,245,0.8) 50%,rgba(13,71,161,0.5) 85%,transparent 100%);
+    border: none; margin: 24px 0;
+    box-shadow: 0 0 12px rgba(66,165,245,0.3);
+}
+
+/* Point pulsant */
+.pulse-dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; background: #00e676;
+    box-shadow: 0 0 0 0 rgba(0,230,118,0.4);
+    animation: pulse 2s infinite; margin-right: 6px;
+    vertical-align: middle;
+}
+
+/* Footer */
 .footer {
-    background:#FFF; border-top:1px solid #D8E2EC; padding:14px 32px;
-    display:flex; align-items:center; justify-content:space-between; margin-top:28px;
+    text-align: center; padding: 28px; margin-top: 48px;
+    border-top: 1px solid rgba(66,165,245,0.12);
+    color: #2d5a8e; font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; font-family: 'Share Tech Mono', monospace;
 }
-.ft-d { font-size:0.68rem; color:#7F8C8D; max-width:680px; line-height:1.55; }
-.ft-r { font-size:0.62rem; color:#A0B0C0; text-align:right; line-height:1.65; }
+.footer span { color: #42a5f5; }
 
-/* ── Scrollbar ───────────────────────────────────────────── */
-::-webkit-scrollbar       { width:5px; }
-::-webkit-scrollbar-track { background:#F2F5F8; }
-::-webkit-scrollbar-thumb { background:#B8C8D8; border-radius:3px; }
+/* Lien externe sidebar */
+.ext-link {
+    display: block; padding: 10px 14px;
+    background: linear-gradient(135deg,#0d47a1,#1976d2);
+    color: white !important; border-radius: 10px; text-align: center;
+    font-family: 'Exo 2',sans-serif; font-size: 13px; font-weight: 700;
+    letter-spacing: 0.5px; text-decoration: none; margin: 6px 0;
+    border: 1px solid rgba(66,165,245,0.4);
+    box-shadow: 0 0 20px rgba(13,71,161,0.4);
+    transition: all 0.3s ease;
+}
+.ext-link:hover {
+    box-shadow: 0 0 30px rgba(66,165,245,0.5);
+    transform: translateY(-2px);
+}
+
+/* Scan ligne animée */
+[data-testid="stMain"]::after {
+    content: ''; position: fixed; top: 0; left: 0;
+    width: 100%; height: 3px;
+    background: linear-gradient(90deg,transparent,rgba(66,165,245,0.6),rgba(124,77,255,0.4),transparent);
+    animation: scanline 8s linear infinite;
+    z-index: 9999; pointer-events: none;
+}
+
+/* ── Animations ── */
+@keyframes shimmer {
+    0%   { background-position: 0% center; }
+    100% { background-position: 300% center; }
+}
+@keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(0,230,118,0.4); }
+    70%  { box-shadow: 0 0 0 8px rgba(0,230,118,0); }
+    100% { box-shadow: 0 0 0 0 rgba(0,230,118,0); }
+}
+@keyframes scanline {
+    0%   { top: 0%; opacity: 1; }
+    80%  { opacity: 0.6; }
+    100% { top: 100%; opacity: 0; }
+}
 </style>
+
+<!-- ═══ FOND BLUEPRINT ANIMÉ ═══ -->
+<canvas id="ai-bg-canvas" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;"></canvas>
+<script>
+(function(){
+  const canvas = document.getElementById('ai-bg-canvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H, t = 0;
+  let dust = [];
+  function initDust(){
+    dust = Array.from({length:55},()=>({
+      x:Math.random()*W, y:Math.random()*H,
+      r:0.5+Math.random()*1.6,
+      vx:(Math.random()-0.5)*0.18, vy:-(0.08+Math.random()*0.22),
+      alpha:0.04+Math.random()*0.18, phase:Math.random()*Math.PI*2,
+    }));
+  }
+  function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; initDust(); }
+  function draw(){
+    t++;
+    ctx.clearRect(0,0,W,H);
+    const bg=ctx.createRadialGradient(W*.5,H*.48,0,W*.5,H*.48,Math.max(W,H)*.75);
+    bg.addColorStop(0,'#0d2a45'); bg.addColorStop(.45,'#0a2038');
+    bg.addColorStop(.75,'#071828'); bg.addColorStop(1,'#050f1c');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    const CELL=36, CELL5=CELL*5;
+    const ox=(t*.08)%CELL, oy=(t*.06)%CELL;
+    ctx.save();
+    ctx.strokeStyle='rgba(80,160,220,0.10)'; ctx.lineWidth=0.5;
+    for(let x=-CELL+ox;x<W+CELL;x+=CELL){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=-CELL+oy;y<H+CELL;y+=CELL){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    ctx.strokeStyle='rgba(100,185,240,0.20)'; ctx.lineWidth=0.8;
+    const ox5=(t*.08)%CELL5, oy5=(t*.06)%CELL5;
+    for(let x=-CELL5+ox5;x<W+CELL5;x+=CELL5){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=-CELL5+oy5;y<H+CELL5;y+=CELL5){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    ctx.restore();
+    ctx.save();
+    for(let x=-CELL5+ox5;x<W+CELL5;x+=CELL5)
+      for(let y=-CELL5+oy5;y<H+CELL5;y+=CELL5){
+        ctx.strokeStyle='rgba(120,200,255,0.30)'; ctx.lineWidth=0.7;
+        const cs=5;
+        ctx.beginPath();ctx.moveTo(x-cs,y);ctx.lineTo(x+cs,y);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(x,y-cs);ctx.lineTo(x,y+cs);ctx.stroke();
+      }
+    ctx.restore();
+    const vig=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.3,W/2,H/2,Math.max(W,H)*.75);
+    vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(.65,'rgba(0,0,0,0.08)'); vig.addColorStop(1,'rgba(0,0,0,0.52)');
+    ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
+    dust.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.phase+=0.012;
+      if(p.y<-4){p.y=H+4;p.x=Math.random()*W;}
+      if(p.x<-4){p.x=W+4;} if(p.x>W+4){p.x=-4;}
+      const a=p.alpha*(0.5+0.5*Math.sin(p.phase));
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(160,220,255,${a})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  resize(); draw();
+  window.addEventListener('resize',resize);
+})();
+</script>
 """
 st.markdown(_CSS, unsafe_allow_html=True)
 
 # §6 ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown(
-        "<div style='padding:16px 14px 10px;border-bottom:1px solid #D8E2EC;margin-bottom:6px;'>"
-        "<div style='font-size:0.90rem;font-weight:700;color:#1B4F72;'>⚙️ Paramètres</div>"
-        "<div style='font-size:0.62rem;color:#7F8C8D;margin-top:2px;'>MEDICALScan AI v9</div>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("""
+    <div style='text-align:center; padding:20px 12px 14px; position:relative;'>
+        <div style='font-family:Share Tech Mono,monospace; font-size:9px;
+                    color:rgba(66,165,245,0.4); letter-spacing:3px; margin-bottom:8px;'>
+            ◈ SYSTEM ONLINE ◈
+        </div>
+        <div style='font-family:Orbitron,monospace; font-size:22px; font-weight:900;
+                    background:linear-gradient(135deg,#42a5f5,#7c4dff,#00b4d8);
+                    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+                    filter:drop-shadow(0 0 12px rgba(66,165,245,0.4));'>
+            🏥 MEDICALScan AI
+        </div>
+        <div style='color:#2d5a8e; font-size:10px; letter-spacing:3px; margin-top:4px;
+                    font-family:Share Tech Mono,monospace;'>
+            RENAL CT ANALYSIS
+        </div>
+        <div style='margin-top:10px; display:flex; justify-content:center; align-items:center; gap:6px;'>
+            <span class='pulse-dot'></span>
+            <span style='font-size:10px; color:#00e676; font-family:Share Tech Mono,monospace;'>
+                AI READY
+            </span>
+        </div>
+    </div>
+    <div style='height:1px; background:linear-gradient(90deg,transparent,rgba(66,165,245,0.4),transparent); margin:4px 0 16px;'></div>
+    """, unsafe_allow_html=True)
 
     groq_ok = bool(KEYS["GROQ"])
     ls_ok   = bool(KEYS["LS"])
+
     st.markdown(
-        f"<div style='padding:0 6px;'><div class='sb-s'>Statut des services</div>"
-        f"<div style='display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;'>"
-        f"<span class='pill {'p-ok' if groq_ok else 'p-no'}'>{'✓' if groq_ok else '✗'} Groq</span>"
-        f"<span class='pill {'p-ok' if ls_ok else 'p-no'}'>{'✓' if ls_ok else '✗'} LangSmith</span>"
+        f"<div style='padding:0 6px 8px;'>"
+        f"<div style='font-family:Share Tech Mono,monospace; font-size:10px; color:#5a8fbf; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px;'>Statut des services</div>"
+        f"<div style='display:flex; gap:6px; flex-wrap:wrap;'>"
+        f"<span class='pill {'pill-ok' if groq_ok else 'pill-no'}'>{'✓' if groq_ok else '✗'} Groq</span>"
+        f"<span class='pill {'pill-ok' if ls_ok else 'pill-no'}'>{'✓' if ls_ok else '✗'} LangSmith</span>"
         f"</div></div>",
         unsafe_allow_html=True,
     )
 
-    st.markdown("<div style='padding:0 6px;'><div class='sb-s'>Modèle LLM</div></div>",
-                unsafe_allow_html=True)
+    st.markdown("<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;letter-spacing:2px;text-transform:uppercase;padding:0 6px;margin:12px 0 6px;'>Modèle LLM</div>", unsafe_allow_html=True)
     groq_model: str = st.selectbox(
         "groq_model",
-        ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"],
+        ["llama-3.3-70b-versatile","llama-3.1-8b-instant","mixtral-8x7b-32768","gemma2-9b-it"],
         label_visibility="collapsed",
     )
 
-    st.markdown("<div style='padding:0 6px;'><div class='sb-s'>Monitoring</div></div>",
-                unsafe_allow_html=True)
+    st.markdown("<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;letter-spacing:2px;text-transform:uppercase;padding:0 6px;margin:12px 0 6px;'>Monitoring</div>", unsafe_allow_html=True)
     langsmith_on: bool = st.toggle("LangSmith actif", value=ls_ok)
 
-    st.markdown("<div style='padding:0 6px;'><div class='sb-s'>Synthèse vocale</div></div>",
-                unsafe_allow_html=True)
+    st.markdown("<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;letter-spacing:2px;text-transform:uppercase;padding:0 6px;margin:12px 0 6px;'>Synthèse vocale</div>", unsafe_allow_html=True)
     tts_on:   bool = st.toggle("Audio TTS", value=True)
-    tts_lang: str  = st.selectbox(
-        "tts_lang", ["Français 🇫🇷", "Allemand 🇩🇪"],
-        label_visibility="collapsed",
-    )
+    tts_lang: str  = st.selectbox("tts_lang", ["Français 🇫🇷","Allemand 🇩🇪"], label_visibility="collapsed")
 
-    st.markdown("<div style='padding:0 6px;'><div class='sb-s'>Options</div></div>",
-                unsafe_allow_html=True)
-    show_tr: bool = st.toggle("Traduction 🇩🇪",       value=True)
+    st.markdown("<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;letter-spacing:2px;text-transform:uppercase;padding:0 6px;margin:12px 0 6px;'>Options</div>", unsafe_allow_html=True)
+    show_tr:  bool = st.toggle("Traduction 🇩🇪",       value=True)
     auto_sum: bool = st.toggle("Résumé automatique", value=True)
 
-    st.markdown("<div style='padding:0 6px;'><div class='sb-s'>Applications</div></div>",
-                unsafe_allow_html=True)
-    _EXT = "https://stocksightaistockprediction-rrceguvir9vxa9tmappwkps.streamlit.app/"
+    st.markdown("<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;letter-spacing:2px;text-transform:uppercase;padding:0 6px;margin:12px 0 6px;'>Applications</div>", unsafe_allow_html=True)
     st.markdown(
-        f"<div style='padding:0 6px 14px;'>"
-        f"<a href='{_EXT}' target='_blank' class='ext-a'>🔗 Application financière</a>"
-        f"</div>",
+        "<div style='padding:0 6px 14px;'>"
+        "<a href='https://stocksightaistockprediction-rrceguvir9vxa9tmappwkps.streamlit.app/'"
+        " target='_blank' class='ext-link'>📈 Application financière StockSight</a>"
+        "</div>",
         unsafe_allow_html=True,
     )
+
     st.markdown(
-        "<div style='padding:14px;margin-top:80px;border-top:1px solid #D8E2EC;'>"
-        "<div style='font-size:0.60rem;color:#7F8C8D;line-height:1.7;'>"
-        "<strong style='color:#1B4F72;'>Groupe 2 · M2 IABD</strong><br>"
+        "<div style='padding:14px;margin-top:40px;border-top:1px solid rgba(66,165,245,0.15);'>"
+        "<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#2d5a8e;line-height:1.8;text-align:center;'>"
+        "<span style='color:#42a5f5;font-weight:700;'>Groupe 2 · M2 IABD</span><br>"
         "HAMAD · KAMNO · EFEMBA · MBOG<br>"
         "KidneyClassifier v5 · AUC 1.00"
         "</div></div>",
@@ -482,7 +770,6 @@ if ls_active:
 
 
 def _langsmith_log(run_name: str, inputs: dict, outputs: dict, meta: dict) -> dict:
-    """Enregistre une trace LangSmith. Silencieux en cas d'erreur."""
     if not ls_active:
         return {}
     try:
@@ -498,59 +785,37 @@ def _langsmith_log(run_name: str, inputs: dict, outputs: dict, meta: dict) -> di
         return {"error": str(exc)}
 
 
-def call_llm(
-    messages: list[dict],
-    system:   str,
-    run_name: str = "llm_call",
-    max_tok:  int = 1000,
-) -> tuple[str, dict]:
-    """
-    Appelle Groq et retourne (texte, métriques).
-    Trace automatiquement dans LangSmith si actif.
-    """
+def call_llm(messages, system, run_name="llm_call", max_tok=1000):
     if not KEYS["GROQ"]:
         return "❌ Clé Groq manquante dans `.streamlit/secrets.toml`.", {}
-
     t0 = datetime.datetime.now()
     try:
         from groq import Groq
-
-        full = [{"role": "system", "content": system}] + messages
+        full = [{"role":"system","content":system}] + messages
         resp = Groq(api_key=KEYS["GROQ"]).chat.completions.create(
             model=groq_model, messages=full, max_tokens=max_tok, temperature=0.3,
         )
         text = resp.choices[0].message.content.strip()
-        lat  = int((datetime.datetime.now() - t0).total_seconds() * 1000)
+        lat  = int((datetime.datetime.now()-t0).total_seconds()*1000)
         meta = {
-            "model":      groq_model,
-            "tokens_in":  getattr(resp.usage, "prompt_tokens",     0),
-            "tokens_out": getattr(resp.usage, "completion_tokens", 0),
+            "model": groq_model,
+            "tokens_in":  getattr(resp.usage,"prompt_tokens",0),
+            "tokens_out": getattr(resp.usage,"completion_tokens",0),
             "latency_ms": lat,
             "run_name":   run_name,
             "timestamp":  datetime.datetime.now().strftime("%H:%M:%S"),
         }
-        _langsmith_log(run_name, {"messages": full}, {"text": text}, meta)
-
-        if "llm_traces" not in st.session_state:
-            st.session_state["llm_traces"] = []
-        st.session_state["llm_traces"].append(meta)
+        _langsmith_log(run_name, {"messages":full}, {"text":text}, meta)
+        st.session_state.setdefault("llm_traces",[]).append(meta)
         return text, meta
-
     except Exception as exc:
         return f"❌ Erreur LLM : {exc}", {}
 
 # §8 ── Modèle CT ──────────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner=False)
-def _load_model(mp: str, tp: str):
-    """
-    Charge le modèle Keras et les seuils de décision.
-    Retourne (model, thresholds, error).
-    error = None       → prédiction réelle disponible
-    error = "DEMO"     → TF absent  → mode démo silencieux
-    error = str(exc)   → autre erreur
-    """
+def _load_model(mp, tp):
     try:
-        import tensorflow as tf  # noqa: F811
+        import tensorflow as tf
         m = tf.keras.models.load_model(mp)
         t = np.load(tp) if os.path.exists(tp) else np.full(4, 0.5)
         return m, t, None
@@ -560,105 +825,69 @@ def _load_model(mp: str, tp: str):
         return None, None, str(exc)
 
 
-def _predict_real(model, thr: np.ndarray, img: Image.Image) -> dict:
-    """Prétraite l'image PIL et retourne le résultat de classification."""
-    x = np.array(
-        img.convert("RGB").resize(IMG_SIZE, Image.BILINEAR),
-        dtype=np.float32,
-    )[np.newaxis, ...] / 255.0
-
+def _predict_real(model, thr, img):
+    x = np.array(img.convert("RGB").resize(IMG_SIZE, Image.BILINEAR), dtype=np.float32)[np.newaxis]/255.0
     probs  = model.predict(x, verbose=0)[0]
     scores = probs - thr
     above  = np.where(scores > 0)[0]
-
-    if   len(above) == 1: idx = int(above[0])
-    elif len(above) >  1: idx = int(above[np.argmax(probs[above])])
-    else:                 idx = int(np.argmax(probs))
-
-    return _build_result(CLASSES[idx], float(probs[idx]),
-                         {c: float(v) for c, v in zip(CLASSES, probs)})
+    idx    = int(above[np.argmax(probs[above])]) if len(above)>1 else (int(above[0]) if len(above)==1 else int(np.argmax(probs)))
+    return _build_result(CLASSES[idx], float(probs[idx]), {c:float(v) for c,v in zip(CLASSES,probs)})
 
 
-def _predict_demo(filename: str) -> dict:
-    """
-    Prédiction déterministe basée sur le hash du nom de fichier.
-    Garantit un résultat cohérent à chaque rechargement. Invisible à l'utilisateur.
-    """
+def _predict_demo(filename):
     import hashlib
-
-    cls = CLASSES[int(hashlib.md5(filename.encode()).hexdigest(), 16) % 4]
-    c   = {"Tumor": 0.87, "Stone": 0.92, "Cyst": 0.78, "Normal": 0.95}[cls]
-    raw = {k: 0.02 for k in CLASSES}
-    raw[cls] = c
+    cls = CLASSES[int(hashlib.md5(filename.encode()).hexdigest(),16)%4]
+    c   = {"Tumor":0.87,"Stone":0.92,"Cyst":0.78,"Normal":0.95}[cls]
+    raw = {k:0.02 for k in CLASSES}; raw[cls]=c
     tot = sum(raw.values())
-    return _build_result(cls, c, {k: v / tot for k, v in raw.items()})
+    return _build_result(cls, c, {k:v/tot for k,v in raw.items()})
 
 
-def _build_result(cls: str, conf: float, probs: dict) -> dict:
-    return {
-        "class":   cls,
-        "conf":    conf,
-        "probs":   probs,
-        "ts":      datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    }
+def _build_result(cls, conf, probs):
+    return {"class":cls,"conf":conf,"probs":probs,"ts":datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 # §9 ── Fonctions utilitaires ──────────────────────────────────────────────────
-def tts(text: str, lang: str) -> bytes | None:
-    """Synthèse vocale via gTTS. Retourne None si indisponible."""
+def tts(text, lang):
     try:
         import re
         from gtts import gTTS
-
-        clean = re.sub(r"\*+|#+\s*", "", text)
-        clean = re.sub(r"\n+", " ", clean).strip()
-        buf   = io.BytesIO()
+        clean = re.sub(r"\*+|#+\s*","",text)
+        clean = re.sub(r"\n+"," ",clean).strip()
+        buf = io.BytesIO()
         gTTS(text=clean, lang="de" if "Allemand" in lang else "fr", slow=False).write_to_fp(buf)
-        buf.seek(0)
-        return buf.read()
+        buf.seek(0); return buf.read()
     except Exception:
         return None
 
 
-def translate_de(text_fr: str) -> str:
-    """Traduit un texte médical FR → DE via le LLM configuré."""
+def translate_de(text_fr):
     out, _ = call_llm(
-        messages=[{"role": "user", "content": text_fr}],
-        system=(
-            "Traduis ce texte médical du français vers l'allemand. "
-            "Réponds UNIQUEMENT avec la traduction."
-        ),
-        run_name="translation_fr_de",
-        max_tok=800,
+        messages=[{"role":"user","content":text_fr}],
+        system="Traduis ce texte médical du français vers l'allemand. Réponds UNIQUEMENT avec la traduction.",
+        run_name="translation_fr_de", max_tok=800,
     )
     return out
 
 
-def make_summary(history: list[dict], res: dict) -> dict:
-    """Génère un résumé structuré de consultation (FR + DE)."""
+def make_summary(history, res):
     cls = res["class"]
-    tr  = "\n".join(
-        f"{'Patient' if m['role'] == 'user' else 'Médecin IA'}: {m['content']}"
-        for m in history
-    )
+    tr  = "\n".join(f"{'Patient' if m['role']=='user' else 'Médecin IA'}: {m['content']}" for m in history)
     fr, _ = call_llm(
-        messages=[{"role": "user", "content": f"Conversation :\n{tr}"}],
+        messages=[{"role":"user","content":f"Conversation :\n{tr}"}],
         system=(
             f"Résume en 5 points structurés (max 250 mots) :\n"
             f"Résultat IA : {cls} ({CTX[cls]['urgence']}) | Confiance : {res['conf']*100:.1f}%\n"
             f"1. Résultat  2. Points clés  3. Recommandations  4. Urgence  5. Avertissement IA\n"
             f"Réponds UNIQUEMENT avec le résumé structuré."
         ),
-        run_name="summary_generation",
-        max_tok=600,
+        run_name="summary_generation", max_tok=600,
     )
-    return {"fr": fr, "de": translate_de(fr)}
+    return {"fr":fr,"de":translate_de(fr)}
 
 
-def make_system_prompt(res: dict) -> str:
-    """Construit le prompt système du chatbot médical."""
-    cls  = res["class"]
-    cfg  = CLASS_CFG[cls]
-    prob = "\n".join(f"  - {c} : {p*100:.1f}%" for c, p in res["probs"].items())
+def make_system_prompt(res):
+    cls=res["class"]; cfg=CLASS_CFG[cls]
+    prob="\n".join(f"  - {c} : {p*100:.1f}%" for c,p in res["probs"].items())
     return (
         f"Tu es un assistant médical de MEDICALScan AI (radiologie rénale, AUC=1.00).\n"
         f"RÉSULTAT : {cls} ({cfg['label']}) | Confiance : {res['conf']*100:.1f}%\n"
@@ -674,120 +903,144 @@ def make_system_prompt(res: dict) -> str:
 
 # §10 ── Composant render_ct_result ────────────────────────────────────────────
 def render_ct_result(res: dict) -> None:
-    """
-    Affiche le bloc résultat complet dans l'onglet Analyse CT :
-    — En-tête  : classe + label
-    — Barre    : niveau de confiance
-    — Métriques: confiance · urgence · horodatage
-    — Alerte   : message contextuel RAG
-    """
-    cls = res["class"]
-    conf = res["conf"]
-    cfg  = CLASS_CFG[cls]
-    uc   = URGENCE_COLOR.get(cfg["urgence"].split()[0], "#7F8C8D")
-    lbl  = "font-size:0.57rem;color:#7F8C8D;text-transform:uppercase;letter-spacing:1px;margin-top:3px;"
+    cls  = res["class"]; conf = res["conf"]; cfg = CLASS_CFG[cls]
 
-    # En-tête
+    # En-tête résultat
     st.markdown(
-        f"<div class='res-head'>"
-        f"<div style='font-size:0.62rem;font-weight:600;color:#7F8C8D;"
-        f"letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;'>"
-        f"Diagnostic IA — Résultat</div>"
-        f"<div style='font-size:1.85rem;font-weight:700;color:{cfg['color']};line-height:1.1;'>"
+        f"<div class='ct-result-card' style='--card-accent:{cfg[\"color\"]};border-color:{cfg[\"border\"]};'>"
+        f"<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;"
+        f"letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;'>Diagnostic IA — Résultat</div>"
+        f"<div style='font-family:Orbitron,monospace;font-size:28px;font-weight:900;"
+        f"color:{cfg[\"color\"]};text-shadow:0 0 20px {cfg[\"neon\"]};line-height:1.1;'>"
         f"{cfg['emoji']} {cls}</div>"
-        f"<div style='font-size:0.88rem;color:#4A6274;margin-top:3px;'>{cfg['label']}</div>"
+        f"<div style='font-family:Exo 2,sans-serif;font-size:14px;color:#8aabcc;margin-top:4px;'>{cfg['label']}</div>"
         f"</div>",
         unsafe_allow_html=True,
     )
 
     # Barre de confiance
     st.markdown(
-        f"<div class='res-bar'>"
-        f"<div style='display:flex;justify-content:space-between;font-size:0.73rem;"
-        f"color:#5D7A8A;font-weight:500;padding-top:13px;margin-bottom:6px;'>"
+        f"<div class='ct-result-card' style='--card-accent:{cfg[\"color\"]};border-color:{cfg[\"border\"]};padding:14px 18px;'>"
+        f"<div style='display:flex;justify-content:space-between;font-family:Exo 2,sans-serif;"
+        f"font-size:12px;color:#7aabd4;font-weight:600;margin-bottom:8px;'>"
         f"<span>Niveau de confiance</span>"
-        f"<span style='font-family:JetBrains Mono,monospace;font-weight:700;color:{cfg['color']};'>"
-        f"{conf*100:.1f}%</span></div>"
-        f"<div style='height:8px;background:#EEF3F7;border-radius:4px;overflow:hidden;margin-bottom:12px;'>"
-        f"<div style='height:100%;width:{conf*100:.1f}%;background:{cfg['color']};border-radius:4px;'>"
-        f"</div></div></div>",
+        f"<span style='font-family:Orbitron,monospace;font-weight:900;font-size:16px;color:{cfg[\"color\"]};"
+        f"text-shadow:0 0 15px {cfg[\"neon\"]};'>{conf*100:.1f}%</span></div>"
+        f"<div style='height:10px;background:rgba(13,71,161,0.2);border-radius:5px;overflow:hidden;"
+        f"border:1px solid rgba(66,165,245,0.15);'>"
+        f"<div style='height:100%;width:{conf*100:.1f}%;background:linear-gradient(90deg,{cfg[\"color\"]},{cfg[\"neon\"]});"
+        f"border-radius:5px;box-shadow:0 0 10px {cfg[\"neon\"]};'></div></div>"
+        f"</div>",
         unsafe_allow_html=True,
     )
 
-    # Métriques (3 colonnes Streamlit natives — évite les conflits f-string/CSS)
+    # Métriques 3 colonnes
     c1, c2, c3 = st.columns(3)
+    lbl_style = "font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;"
     with c1:
         st.markdown(
-            f"<div class='mc'><div class='mv' style='color:{cfg['color']};'>{conf*100:.1f}%</div>"
-            f"<div style='{lbl}'>Confiance</div></div>",
-            unsafe_allow_html=True,
+            f"<div class='ct-result-card' style='text-align:center;--card-accent:{cfg[\"color\"]};border-color:{cfg[\"border\"]};padding:14px;'>"
+            f"<div style='font-family:Orbitron,monospace;font-size:22px;font-weight:900;"
+            f"color:{cfg[\"color\"]};text-shadow:0 0 15px {cfg[\"neon\"]};'>{conf*100:.1f}%</div>"
+            f"<div style='{lbl_style}'>Confiance</div></div>", unsafe_allow_html=True,
         )
     with c2:
         st.markdown(
-            f"<div class='mc'><div class='mv' style='font-size:0.86rem;color:{uc};'>"
-            f"{cfg['urgence']}</div><div style='{lbl}'>Urgence</div></div>",
-            unsafe_allow_html=True,
+            f"<div class='ct-result-card' style='text-align:center;--card-accent:{cfg[\"color\"]};border-color:{cfg[\"border\"]};padding:14px;'>"
+            f"<div style='font-family:Exo 2,sans-serif;font-size:13px;font-weight:700;"
+            f"color:{cfg[\"color\"]};'>{cfg['urgence']}</div>"
+            f"<div style='{lbl_style}'>Urgence</div></div>", unsafe_allow_html=True,
         )
     with c3:
         st.markdown(
-            f"<div class='mc'><div class='mv' style='font-size:0.80rem;color:#1B4F72;'>"
-            f"{res['ts'][-8:]}</div><div style='{lbl}'>Horodatage</div></div>",
-            unsafe_allow_html=True,
+            f"<div class='ct-result-card' style='text-align:center;--card-accent:#42a5f5;padding:14px;'>"
+            f"<div style='font-family:Share Tech Mono,monospace;font-size:14px;font-weight:700;"
+            f"color:#42a5f5;'>{res['ts'][-8:]}</div>"
+            f"<div style='{lbl_style}'>Horodatage</div></div>", unsafe_allow_html=True,
         )
 
-    # Alerte contextuelle
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+    # Alerte contextuelle dark
+    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
     if cls == "Tumor" and conf > 0.70:
         st.markdown(
-            f"<div class='al al-r'><div class='al-t'>🚨 CAS CRITIQUE DÉTECTÉ</div>"
-            f"<div class='al-b'>Tumeur rénale · confiance {conf*100:.1f}%. "
-            f"Consultation oncologique urgente.</div></div>",
+            "<div class='al al-r'><div class='al-t'>🚨 CAS CRITIQUE DÉTECTÉ</div>"
+            "<div class='al-b'>Tumeur rénale confirmée · Consultation oncologique urgente requise.</div></div>",
             unsafe_allow_html=True,
         )
     elif cls == "Tumor":
         st.markdown(
             "<div class='al al-r'><div class='al-t'>⚠️ Tumeur rénale détectée</div>"
-            "<div class='al-b'>Confirmation par IRM et avis spécialisé requis.</div></div>",
+            "<div class='al-b'>Confirmation par IRM et avis spécialisé requis sans délai.</div></div>",
             unsafe_allow_html=True,
         )
     elif cls == "Stone":
         st.markdown(
             "<div class='al al-o'><div class='al-t'>🪨 Lithiase rénale détectée</div>"
-            "<div class='al-b'>Consultation urologique recommandée.</div></div>",
+            "<div class='al-b'>Consultation urologique recommandée pour évaluation complète.</div></div>",
             unsafe_allow_html=True,
         )
     elif cls == "Cyst":
         st.markdown(
             "<div class='al al-b2'><div class='al-t'>💧 Kyste rénal détecté</div>"
-            "<div class='al-b'>Suivi échographique à 6-12 mois. Classification Bosniak conseillée.</div></div>",
+            "<div class='al-b'>Suivi échographique à 6-12 mois · Classification Bosniak conseillée.</div></div>",
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
             "<div class='al al-g'><div class='al-t'>✅ Aucune anomalie détectée</div>"
-            "<div class='al-b'>Structures rénales normales. Suivi médical habituel recommandé.</div></div>",
+            "<div class='al-b'>Structures rénales normales · Suivi médical habituel recommandé.</div></div>",
             unsafe_allow_html=True,
         )
 
 # §11 ── Header ────────────────────────────────────────────────────────────────
-st.markdown(
-    f'<div class="med-header">'
-    f'<div class="med-header-left">'
-    f'  <div class="med-logo-box">🏥</div>'
-    f'  <div>'
-    f'    <div class="med-title">MEDICALScan AI</div>'
-    f'    <div class="med-subtitle">Renal CT Scan Analysis · Groupe 2 · M2 IABD</div>'
-    f'  </div>'
-    f'</div>'
-    f'<div class="med-header-right">'
-    f'  <span class="hbadge {"on" if bool(KEYS["GROQ"]) else ""}">{"● GROQ OK" if bool(KEYS["GROQ"]) else "○ GROQ OFFLINE"}</span>'
-    f'  <span class="hbadge {"on" if ls_active else ""}">{"● LANGSMITH ON" if ls_active else "○ LANGSMITH OFF"}</span>'
-    f'  <span class="hbadge">KidneyClassifier v5 · AUC 1.00</span>'
-    f'  <span class="hbadge">{datetime.datetime.now().strftime("%d/%m/%Y")}</span>'
-    f'</div>'
-    f'</div>',
-    unsafe_allow_html=True,
-)
+groq_status = "● GROQ OK"    if bool(KEYS["GROQ"]) else "○ GROQ OFFLINE"
+ls_status   = "● LANGSMITH"  if ls_active          else "○ LANGSMITH OFF"
+
+st.markdown(f"""
+<div style='background:linear-gradient(135deg,#020818 0%,#0a1e35 40%,#0d2a45 100%);
+            padding:20px 32px; display:flex; align-items:center; justify-content:space-between;
+            border-bottom:1px solid rgba(66,165,245,0.3);
+            box-shadow:0 4px 30px rgba(0,0,0,0.5), 0 0 60px rgba(13,71,161,0.2);
+            position:relative; overflow:hidden;'>
+  <div style='position:absolute;top:0;left:0;right:0;height:2px;
+              background:linear-gradient(90deg,transparent,#42a5f5,#7c4dff,#00b4d8,transparent);'></div>
+  <div style='display:flex; align-items:center; gap:16px;'>
+    <div style='width:48px;height:48px;border-radius:12px;
+                background:rgba(66,165,245,0.1);border:1px solid rgba(66,165,245,0.3);
+                display:flex;align-items:center;justify-content:center;font-size:24px;
+                box-shadow:0 0 20px rgba(66,165,245,0.2);'>🏥</div>
+    <div>
+      <div style='font-family:Orbitron,monospace;font-size:22px;font-weight:900;
+                  background:linear-gradient(90deg,#42a5f5,#7c4dff,#00b4d8);
+                  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+                  filter:drop-shadow(0 0 10px rgba(66,165,245,0.3));'>
+        MEDICALScan AI
+      </div>
+      <div style='font-family:Share Tech Mono,monospace;font-size:10px;
+                  color:rgba(66,165,245,0.6);letter-spacing:3px;text-transform:uppercase;margin-top:3px;'>
+        Renal CT Scan Analysis · Groupe 2 · M2 IABD
+      </div>
+    </div>
+  </div>
+  <div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap;'>
+    <span style='font-family:Share Tech Mono,monospace;font-size:10px;padding:5px 12px;
+                 border-radius:5px;border:1px solid {'rgba(0,230,118,0.4)' if bool(KEYS['GROQ']) else 'rgba(255,82,82,0.3)'};
+                 color:{'#00e676' if bool(KEYS['GROQ']) else '#ff5252'};
+                 background:{'rgba(0,80,40,0.3)' if bool(KEYS['GROQ']) else 'rgba(120,0,0,0.2)'};
+                 letter-spacing:0.5px;'>{groq_status}</span>
+    <span style='font-family:Share Tech Mono,monospace;font-size:10px;padding:5px 12px;
+                 border-radius:5px;border:1px solid {'rgba(0,230,118,0.4)' if ls_active else 'rgba(66,165,245,0.2)'};
+                 color:{'#00e676' if ls_active else '#5a8fbf'};
+                 background:{'rgba(0,80,40,0.3)' if ls_active else 'rgba(13,71,161,0.1)'};'>{ls_status}</span>
+    <span style='font-family:Share Tech Mono,monospace;font-size:10px;padding:5px 12px;
+                 border-radius:5px;border:1px solid rgba(66,165,245,0.2);color:#5a8fbf;
+                 background:rgba(13,71,161,0.1);'>KidneyClassifier v5 · AUC 1.00</span>
+    <span style='font-family:Share Tech Mono,monospace;font-size:10px;padding:5px 12px;
+                 border-radius:5px;border:1px solid rgba(66,165,245,0.2);color:#5a8fbf;
+                 background:rgba(13,71,161,0.1);'>{datetime.datetime.now().strftime("%d/%m/%Y")}</span>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
 # §12-15 ── Onglets ────────────────────────────────────────────────────────────
 tab_scan, tab_chat, tab_sum, tab_mon = st.tabs([
@@ -801,101 +1054,74 @@ tab_scan, tab_chat, tab_sum, tab_mon = st.tabs([
 with tab_scan:
     model, thr, model_err = _load_model(KEYS["MP"], KEYS["TP"])
 
+    # Section upload
+    st.markdown("<div class='section-title'>🩻 Import de l'image CT</div>", unsafe_allow_html=True)
+
     col_l, col_r = st.columns([1, 1], gap="large")
 
-    # Colonne gauche — upload
     with col_l:
-        st.markdown(
-            "<div style='display:flex;align-items:center;gap:10px;margin-bottom:14px;'>"
-            "<div style='width:30px;height:30px;border-radius:7px;background:#EBF3FA;"
-            "border:1px solid #AECDE8;display:flex;align-items:center;justify-content:center;"
-            "flex-shrink:0;'>"
-            "<svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='#1B4F72'"
-            " stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>"
-            "<rect x='3' y='3' width='18' height='18' rx='3'/>"
-            "<circle cx='12' cy='12' r='4'/>"
-            "<line x1='12' y1='3' x2='12' y2='6'/><line x1='12' y1='18' x2='12' y2='21'/>"
-            "<line x1='3' y1='12' x2='6' y2='12'/><line x1='18' y1='12' x2='21' y2='12'/>"
-            "</svg></div>"
-            "<div>"
-            "<div style='font-size:0.79rem;font-weight:600;color:#1A2332;'>Image CT rénale</div>"
-            "<div style='font-size:0.65rem;color:#7F8C8D;margin-top:1px;'>JPEG · PNG · JPG · Max 10 MB</div>"
-            "</div></div>",
-            unsafe_allow_html=True,
-        )
-
         uploaded = st.file_uploader(
-            "Importer une image CT",
-            type=["jpg", "jpeg", "png"],
+            "Importer une image CT rénale",
+            type=["jpg","jpeg","png"],
             label_visibility="visible",
             key="ct_upload",
         )
 
         if uploaded:
             pil = Image.open(uploaded)
-            # Bannière fichier
             st.markdown(
-                f"<div style='display:flex;align-items:center;gap:10px;background:#EBF3FA;"
-                f"border:1px solid #AECDE8;border-radius:8px;padding:10px 14px;margin-bottom:10px;'>"
-                f"<div style='width:32px;height:32px;border-radius:7px;background:#1B4F72;"
-                f"display:flex;align-items:center;justify-content:center;flex-shrink:0;'>"
-                f"<svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#fff'"
-                f" stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>"
-                f"<rect x='3' y='3' width='18' height='18' rx='3'/>"
-                f"<circle cx='12' cy='12' r='4'/></svg></div>"
+                f"<div class='ct-result-card' style='padding:12px 16px; margin-bottom:10px;'>"
+                f"<div style='display:flex;align-items:center;gap:12px;'>"
+                f"<div style='width:36px;height:36px;border-radius:8px;background:rgba(13,71,161,0.4);"
+                f"border:1px solid rgba(66,165,245,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;'>🩻</div>"
                 f"<div style='flex:1;min-width:0;'>"
-                f"<div style='font-size:0.76rem;font-weight:600;color:#0C4472;"
+                f"<div style='font-family:Share Tech Mono,monospace;font-size:12px;color:#90caf9;"
                 f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>{uploaded.name}</div>"
-                f"<div style='font-size:0.65rem;color:#185FA5;margin-top:2px;'>"
+                f"<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;margin-top:2px;'>"
                 f"{pil.size[0]}×{pil.size[1]} px · {pil.mode} · {uploaded.size//1024} Ko</div>"
                 f"</div>"
-                f"<div style='background:#F0FBF4;border:0.5px solid #82D0A0;border-radius:5px;"
-                f"padding:3px 9px;display:flex;align-items:center;gap:4px;'>"
-                f"<div style='width:5px;height:5px;border-radius:50%;background:#1A7A4A;'></div>"
-                f"<span style='font-size:0.65rem;font-weight:500;color:#1A7A4A;'>Prêt</span>"
-                f"</div></div>",
+                f"<div style='background:rgba(0,80,40,0.4);border:1px solid rgba(0,230,118,0.4);border-radius:6px;"
+                f"padding:3px 10px;display:flex;align-items:center;gap:4px;'>"
+                f"<span class='pulse-dot' style='width:6px;height:6px;margin:0;'></span>"
+                f"<span style='font-family:Share Tech Mono,monospace;font-size:10px;color:#00e676;'>PRÊT</span>"
+                f"</div></div></div>",
                 unsafe_allow_html=True,
             )
             st.image(pil, caption="", use_container_width=True)
         else:
             st.markdown(
-                "<div style='height:190px;display:flex;align-items:center;justify-content:center;"
-                "flex-direction:column;gap:10px;background:#F8FAFB;"
-                "border:1.5px dashed #B8CAD8;border-radius:10px;margin-top:4px;'>"
-                "<div style='font-size:2.5rem;opacity:0.18;'>🩻</div>"
+                "<div style='height:220px;display:flex;align-items:center;justify-content:center;"
+                "flex-direction:column;gap:12px;background:rgba(4,14,38,0.6);"
+                "border:1.5px dashed rgba(66,165,245,0.25);border-radius:14px;margin-top:4px;'>"
+                "<div style='font-size:3rem;opacity:0.2;'>🩻</div>"
                 "<div style='text-align:center;'>"
-                "<div style='font-size:0.77rem;color:#6B8499;font-weight:500;'>Aucune image chargée</div>"
-                "<div style='font-size:0.65rem;color:#A0B8C8;margin-top:4px;'>Utilisez la zone d'import ci-dessus</div>"
+                "<div style='font-family:Exo 2,sans-serif;font-size:13px;color:#5a8fbf;font-weight:600;'>Aucune image chargée</div>"
+                "<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#2d5a8e;margin-top:4px;'>Utilisez la zone d'import ci-dessus</div>"
                 "</div></div>",
                 unsafe_allow_html=True,
             )
 
-    # Colonne droite — résultat
     with col_r:
         if not uploaded:
             st.markdown(
-                "<div class='card' style='height:380px;display:flex;align-items:center;"
-                "justify-content:center;flex-direction:column;gap:12px;'>"
-                "<div style='font-size:3rem;opacity:0.12;'>🔬</div>"
-                "<p style='font-size:0.78rem;color:#A0B8C8;text-align:center;'>"
+                "<div style='height:380px;display:flex;align-items:center;justify-content:center;"
+                "flex-direction:column;gap:14px;background:rgba(4,14,38,0.6);"
+                "border:1px solid rgba(66,165,245,0.2);border-radius:16px;'>"
+                "<div style='font-size:3.5rem;opacity:0.15;'>🔬</div>"
+                "<div style='font-family:Exo 2,sans-serif;font-size:13px;color:#3d6b9e;text-align:center;'>"
                 "En attente d'une image CT<br>"
-                "<span style='font-size:0.68rem;'>Importez un scan pour démarrer l'analyse</span>"
-                "</p></div>",
+                "<span style='font-family:Share Tech Mono,monospace;font-size:10px;color:#2d5a8e;'>"
+                "Importez un scan pour démarrer l'analyse</span></div></div>",
                 unsafe_allow_html=True,
             )
         else:
             prev = st.session_state.get("res", {})
-
             if prev.get("_src") != uploaded.name:
-                # Réinitialisation de toutes les données de session liées à cette analyse
-                for k in ["res", "chat", "sys_prompt", "summary",
-                          "translations", "audio", "llm_traces"]:
+                for k in ["res","chat","sys_prompt","summary","translations","audio","llm_traces"]:
                     st.session_state.pop(k, None)
-
                 if   model_err == "DEMO": res = _predict_demo(uploaded.name)
                 elif model_err:           res = None
                 else:                     res = _predict_real(model, thr, pil)
-
                 if res:
                     res["_src"] = uploaded.name
                     st.session_state["res"] = res
@@ -910,36 +1136,33 @@ with tab_scan:
     # Probabilités + interprétation
     if uploaded and "res" in st.session_state:
         res = st.session_state["res"]
-        cls = res["class"]
-        cfg = CLASS_CFG[cls]
+        cls = res["class"]; cfg = CLASS_CFG[cls]
 
-        st.markdown(
-            "<div class='sdiv'><div class='sdiv-l'></div>"
-            "<div class='sdiv-t'>Distribution des probabilités &amp; Interprétation</div>"
-            "<div class='sdiv-l'></div></div>",
-            unsafe_allow_html=True,
-        )
+        st.markdown("<div class='glow-divider'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='section-title'>📊 Distribution des probabilités & Interprétation</div>", unsafe_allow_html=True)
 
         cp, ci = st.columns([1, 1], gap="large")
 
         with cp:
             st.markdown(
-                "<div class='card'><div class='card-title'><span>📊</span> Probabilités par classe</div>",
+                "<div class='ct-result-card'>"
+                "<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;"
+                "letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;"
+                "padding-bottom:10px;border-bottom:1px solid rgba(66,165,245,0.15);'>"
+                "📊 Probabilités par classe</div>",
                 unsafe_allow_html=True,
             )
             for c, p in sorted(res["probs"].items(), key=lambda x: -x[1]):
                 cc = CLASS_CFG[c]; ip = c == cls
-                bg = "background:#F8FAFB;border-radius:5px;padding:3px 7px;" if ip else ""
-                nm = f"font-weight:700;color:{cc['color']};"               if ip else ""
-                op = "1.0" if ip else "0.35"
+                nm = f"color:{cc['color']};font-weight:700;" if ip else ""
+                op = "1.0" if ip else "0.4"
+                badge_txt = "TOP" if ip else cc["emoji"]
                 st.markdown(
-                    f"<div class='pr' style='{bg}'>"
-                    f"<div class='pn' style='{nm}'>{c}</div>"
-                    f"<div class='pt'><div class='pf' style='width:{p*100:.1f}%;"
-                    f"background:{cc['color']};opacity:{op};'></div></div>"
-                    f"<div class='pp' style='{nm}'>{p*100:.1f}%</div>"
-                    f"<div class='pb' style='background:{cc['bg']};color:{cc['color']};"
-                    f"border:1px solid {cc['border']};'>{'▶ TOP' if ip else cc['emoji']}</div>"
+                    f"<div class='prob-row' style='{'background:rgba(13,71,161,0.15);border-radius:6px;padding:3px 8px;' if ip else ''}'>"
+                    f"<div class='prob-name' style='{nm}'>{c}</div>"
+                    f"<div class='prob-track'><div class='prob-fill' style='width:{p*100:.1f}%;background:{cc['color']};opacity:{op};box-shadow:0 0 8px {cc[\"neon\"]};'></div></div>"
+                    f"<div class='prob-pct' style='{nm}'>{p*100:.1f}%</div>"
+                    f"<div class='prob-badge' style='background:{cc[\"bg\"]};color:{cc[\"color\"]};border:1px solid {cc[\"border\"]};'>{badge_txt}</div>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )
@@ -947,19 +1170,26 @@ with tab_scan:
 
         with ci:
             st.markdown(
-                f"<div class='ic'>"
-                f"<div class='it'>📝 Interprétation médicale automatique</div>"
-                f"<div class='ix'>{INTERP[cls]}</div>"
-                f"<div style='margin-top:14px;padding-top:10px;border-top:1px solid #EEF3F7;'>"
-                f"<div style='font-size:0.62rem;color:#7F8C8D;text-transform:uppercase;"
-                f"letter-spacing:1px;margin-bottom:6px;'>Suivi recommandé</div>"
-                f"<div style='font-size:0.78rem;font-weight:600;color:{cfg['color']};'>"
-                f"{CTX[cls]['suivi']}</div>"
+                f"<div class='ct-result-card' style='border-color:{cfg[\"border\"]};'>"
+                f"<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;"
+                f"letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;"
+                f"padding-bottom:8px;border-bottom:1px solid rgba(66,165,245,0.15);'>"
+                f"📝 Interprétation médicale automatique</div>"
+                f"<div style='font-family:Exo 2,sans-serif;font-size:13px;color:#c8deff;line-height:1.75;'>"
+                f"{INTERP[cls]}</div>"
+                f"<div style='margin-top:14px;padding-top:12px;border-top:1px solid rgba(66,165,245,0.15);'>"
+                f"<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;"
+                f"text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;'>Suivi recommandé</div>"
+                f"<div style='font-family:Exo 2,sans-serif;font-size:13px;font-weight:700;color:{cfg['color']};"
+                f"text-shadow:0 0 10px {cfg[\"neon\"]};'>{CTX[cls]['suivi']}</div>"
                 f"</div></div>",
                 unsafe_allow_html=True,
             )
 
-        st.info("💬 Consultez l'onglet **Assistant Médical** pour des questions personnalisées.")
+        st.markdown(
+            "<div class='info-box'>💬 Consultez l'onglet <strong>Assistant Médical</strong> pour des questions personnalisées sur ce résultat.</div>",
+            unsafe_allow_html=True,
+        )
 
 # ─── §13  ASSISTANT MÉDICAL ───────────────────────────────────────────────────
 with tab_chat:
@@ -967,11 +1197,14 @@ with tab_chat:
 
     if res is None:
         st.markdown(
-            "<div class='card' style='text-align:center;padding:48px;'>"
-            "<div style='font-size:3rem;opacity:0.18;margin-bottom:14px;'>🔬</div>"
-            "<div style='font-size:0.85rem;color:#7F8C8D;'>Aucune analyse disponible<br>"
-            "<span style='font-size:0.73rem;'>Uploadez une image CT dans l'onglet Analyse CT</span>"
-            "</div></div>",
+            "<div style='height:320px;display:flex;align-items:center;justify-content:center;"
+            "flex-direction:column;gap:14px;background:rgba(4,14,38,0.6);"
+            "border:1px solid rgba(66,165,245,0.2);border-radius:16px;margin-top:10px;'>"
+            "<div style='font-size:3rem;opacity:0.15;'>🔬</div>"
+            "<div style='font-family:Exo 2,sans-serif;font-size:13px;color:#3d6b9e;text-align:center;'>"
+            "Aucune analyse disponible<br>"
+            "<span style='font-family:Share Tech Mono,monospace;font-size:10px;color:#2d5a8e;'>"
+            "Uploadez une image CT dans l'onglet Analyse CT</span></div></div>",
             unsafe_allow_html=True,
         )
     elif not KEYS["GROQ"]:
@@ -980,64 +1213,59 @@ with tab_chat:
         cls = res["class"]; conf = res["conf"]; cfg = CLASS_CFG[cls]
 
         pills = "".join([
-            "<span class='pill p-ok'>🔊 Audio</span>"     if tts_on    else "",
-            "<span class='pill p-ok'>🇩🇪 Traduction</span>" if show_tr   else "",
-            "<span class='pill p-ok'>🟢 LangSmith</span>"  if ls_active else "",
+            "<span class='pill pill-ok'>🔊 Audio</span>"      if tts_on    else "",
+            "<span class='pill pill-ok'>🇩🇪 Traduction</span>"  if show_tr   else "",
+            "<span class='pill pill-ok'>🟢 LangSmith</span>"   if ls_active else "",
         ])
         st.markdown(
-            f"<div class='ctx-bar'>"
-            f"<div><div style='font-size:0.85rem;font-weight:600;color:{cfg['color']};'>"
-            f"{cfg['emoji']} {cls} — {cfg['label']}</div>"
-            f"<div style='font-size:0.70rem;color:#7F8C8D;'>"
+            f"<div style='background:rgba(4,14,38,0.7);border:1px solid rgba(66,165,245,0.2);"
+            f"border-left:3px solid {cfg['color']};border-radius:10px;padding:12px 16px;"
+            f"display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;'>"
+            f"<div>"
+            f"<div style='font-family:Orbitron,monospace;font-size:14px;font-weight:700;"
+            f"color:{cfg['color']};text-shadow:0 0 10px {cfg[\"neon\"]};'>{cfg['emoji']} {cls} — {cfg['label']}</div>"
+            f"<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;margin-top:3px;'>"
             f"Confiance {conf*100:.1f}% · {res['ts']} · {groq_model}</div></div>"
             f"<div style='display:flex;gap:6px;'>{pills}</div></div>",
             unsafe_allow_html=True,
         )
 
-        # Initialisation session
-        for k, v in [("chat", []), ("translations", {}), ("audio", {})]:
+        for k, v in [("chat",[]),("translations",{}),("audio",{})]:
             st.session_state.setdefault(k, v)
         st.session_state.setdefault("sys_prompt", make_system_prompt(res))
 
-        # Message de bienvenue (première ouverture)
         if not st.session_state["chat"]:
             welcome, _ = call_llm(
-                messages=[{"role": "user", "content": "Bonjour, je viens de recevoir le résultat de mon scanner rénal."}],
+                messages=[{"role":"user","content":"Bonjour, je viens de recevoir le résultat de mon scanner rénal."}],
                 system=st.session_state["sys_prompt"],
                 run_name="welcome_message",
             )
-            st.session_state["chat"].append({"role": "assistant", "content": welcome})
+            st.session_state["chat"].append({"role":"assistant","content":welcome})
             if show_tr:
                 st.session_state["translations"][0] = translate_de(welcome)
             if tts_on:
-                ab = tts(st.session_state["translations"].get(0, welcome) if "Allemand" in tts_lang else welcome, tts_lang)
-                if ab:
-                    st.session_state["audio"][0] = ab
+                ab = tts(st.session_state["translations"].get(0,welcome) if "Allemand" in tts_lang else welcome, tts_lang)
+                if ab: st.session_state["audio"][0] = ab
 
-        # Historique de conversation
         ai = 0
         for msg in st.session_state["chat"]:
-            with st.chat_message(msg["role"], avatar="👤" if msg["role"] == "user" else "🏥"):
+            with st.chat_message(msg["role"], avatar="👤" if msg["role"]=="user" else "🏥"):
                 st.markdown(msg["content"])
                 if msg["role"] == "assistant":
-                    if show_tr and (de := st.session_state["translations"].get(ai, "")):
+                    if show_tr and (de := st.session_state["translations"].get(ai,"")):
                         st.markdown(
-                            f"<div class='de'><div class='de-t'>🇩🇪 Deutsche Übersetzung</div>"
+                            f"<div class='de-box'><div class='de-t'>🇩🇪 Deutsche Übersetzung</div>"
                             f"<div class='de-b'>{de}</div></div>",
                             unsafe_allow_html=True,
                         )
                     if tts_on and (ab := st.session_state["audio"].get(ai)):
                         ll = "Deutsch" if "Allemand" in tts_lang else "Français"
-                        st.markdown(
-                            f"<div class='au'><div class='au-t'>🔊 Audio — {ll}</div></div>",
-                            unsafe_allow_html=True,
-                        )
+                        st.markdown(f"<div class='audio-box'><div class='au-t'>🔊 Audio — {ll}</div></div>", unsafe_allow_html=True)
                         st.audio(ab, format="audio/mp3")
                     ai += 1
 
-        # Saisie
         if user_in := st.chat_input("Posez votre question sur ce résultat CT..."):
-            st.session_state["chat"].append({"role": "user", "content": user_in})
+            st.session_state["chat"].append({"role":"user","content":user_in})
             with st.chat_message("user", avatar="👤"):
                 st.markdown(user_in)
 
@@ -1048,61 +1276,49 @@ with tab_chat:
                     run_name="chatbot_answer",
                 )
                 st.markdown(answer)
-                st.session_state["chat"].append({"role": "assistant", "content": answer})
-                idx = sum(1 for m in st.session_state["chat"] if m["role"] == "assistant") - 1
+                st.session_state["chat"].append({"role":"assistant","content":answer})
+                idx = sum(1 for m in st.session_state["chat"] if m["role"]=="assistant") - 1
 
                 if show_tr:
                     de = translate_de(answer)
                     st.session_state["translations"][idx] = de
-                    st.markdown(
-                        f"<div class='de'><div class='de-t'>🇩🇪 Deutsche Übersetzung</div>"
-                        f"<div class='de-b'>{de}</div></div>",
-                        unsafe_allow_html=True,
-                    )
+                    st.markdown(f"<div class='de-box'><div class='de-t'>🇩🇪 Deutsche Übersetzung</div><div class='de-b'>{de}</div></div>", unsafe_allow_html=True)
 
                 if tts_on:
-                    txt = st.session_state["translations"].get(idx, answer) if "Allemand" in tts_lang else answer
+                    txt = st.session_state["translations"].get(idx,answer) if "Allemand" in tts_lang else answer
                     ab  = tts(txt, tts_lang)
                     if ab:
                         st.session_state["audio"][idx] = ab
                         ll = "Deutsch" if "Allemand" in tts_lang else "Français"
-                        st.markdown(
-                            f"<div class='au'><div class='au-t'>🔊 {ll}</div></div>",
-                            unsafe_allow_html=True,
-                        )
+                        st.markdown(f"<div class='audio-box'><div class='au-t'>🔊 {ll}</div></div>", unsafe_allow_html=True)
                         st.audio(ab, format="audio/mp3")
 
-                # Résumé auto après chaque échange
                 if KEYS["GROQ"] and len(st.session_state["chat"]) >= 2:
                     st.session_state["summary"] = make_summary(st.session_state["chat"], res)
                     st.success("✅ Résumé mis à jour — onglet **Résumé & Rapport**.")
 
-                # Trace LangSmith inline
                 if metrics and ls_active:
                     st.markdown(
-                        f"<div class='tr'>"
-                        f"<div class='tr-i'>Run : <span>{metrics.get('run_name','')}</span></div>"
-                        f"<div class='tr-i'>Latence : <span>{metrics.get('latency_ms',0)} ms</span></div>"
-                        f"<div class='tr-i'>Tokens : <span>{metrics.get('tokens_in',0)}→{metrics.get('tokens_out',0)}</span></div>"
-                        f"<div class='tr-i'>Modèle : <span>{metrics.get('model','')}</span></div>"
-                        f"<div class='tr-i'>Heure : <span>{metrics.get('timestamp','')}</span></div>"
+                        f"<div class='trace-bar'>"
+                        f"Run : <span>{metrics.get('run_name','')}</span> &nbsp;|&nbsp; "
+                        f"Latence : <span>{metrics.get('latency_ms',0)} ms</span> &nbsp;|&nbsp; "
+                        f"Tokens : <span>{metrics.get('tokens_in',0)}→{metrics.get('tokens_out',0)}</span> &nbsp;|&nbsp; "
+                        f"Modèle : <span>{metrics.get('model','')}</span> &nbsp;|&nbsp; "
+                        f"Heure : <span>{metrics.get('timestamp','')}</span>"
                         f"</div>",
                         unsafe_allow_html=True,
                     )
 
-        # Boutons de contrôle
-        b1, b2, _ = st.columns([1, 1.5, 3])
+        b1, b2, _ = st.columns([1,1.5,3])
         with b1:
             if st.button("🔄 Réinitialiser"):
-                for k in ["chat", "sys_prompt", "translations", "audio", "summary"]:
+                for k in ["chat","sys_prompt","translations","audio","summary"]:
                     st.session_state.pop(k, None)
                 st.rerun()
         with b2:
-            if (
-                len(st.session_state.get("chat", [])) >= 2
+            if (len(st.session_state.get("chat",[]))>=2
                 and not st.session_state.get("summary")
-                and st.button("📋 Générer résumé")
-            ):
+                and st.button("📋 Générer résumé")):
                 st.session_state["summary"] = make_summary(st.session_state["chat"], res)
                 st.success("✅ Résumé généré — onglet **Résumé & Rapport**.")
 
@@ -1114,14 +1330,19 @@ with tab_sum:
 
     if res is None:
         st.markdown(
-            "<div class='card' style='text-align:center;padding:48px;'>"
-            "<div style='font-size:3rem;opacity:0.18;'>📋</div>"
-            "<div style='color:#7F8C8D;font-size:0.80rem;margin-top:10px;'>Aucun résultat disponible</div>"
+            "<div style='height:280px;display:flex;align-items:center;justify-content:center;"
+            "flex-direction:column;gap:12px;background:rgba(4,14,38,0.6);"
+            "border:1px solid rgba(66,165,245,0.2);border-radius:16px;margin-top:10px;'>"
+            "<div style='font-size:3rem;opacity:0.15;'>📋</div>"
+            "<div style='font-family:Exo 2,sans-serif;font-size:13px;color:#3d6b9e;'>Aucun résultat disponible</div>"
             "</div>",
             unsafe_allow_html=True,
         )
     elif len(chat) < 2:
-        st.info("💬 Utilisez l'assistant médical pour générer un résumé de consultation.")
+        st.markdown(
+            "<div class='info-box'>💬 Utilisez l'assistant médical pour générer un résumé de consultation.</div>",
+            unsafe_allow_html=True,
+        )
     else:
         if summary is None and auto_sum and KEYS["GROQ"]:
             summary = make_summary(chat, res)
@@ -1129,180 +1350,174 @@ with tab_sum:
 
         if summary:
             cls = res["class"]; conf = res["conf"]
-            cfg = CLASS_CFG[cls]; uc = URGENCE_COLOR.get(cfg["urgence"].split()[0], "#7F8C8D")
+            cfg = CLASS_CFG[cls]
+
+            st.markdown("<div class='section-title'>📋 Compte Rendu de Consultation</div>", unsafe_allow_html=True)
 
             # En-tête compte rendu
             st.markdown(
-                f"<div class='card' style='border-left:4px solid {cfg['color']};'>"
-                f"<div style='display:flex;justify-content:space-between;align-items:flex-start;"
-                f"flex-wrap:wrap;gap:14px;'>"
+                f"<div class='ct-result-card' style='border-color:{cfg[\"border\"]};padding:20px;margin-bottom:18px;'>"
+                f"<div style='display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;'>"
                 f"<div>"
-                f"<div style='font-size:0.62rem;color:#7F8C8D;text-transform:uppercase;"
-                f"letter-spacing:1px;margin-bottom:4px;'>Compte Rendu — MEDICALScan AI</div>"
-                f"<div style='font-size:1.22rem;font-weight:700;color:{cfg['color']};'>"
+                f"<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;"
+                f"text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;'>Compte Rendu — MEDICALScan AI</div>"
+                f"<div style='font-family:Orbitron,monospace;font-size:20px;font-weight:900;"
+                f"color:{cfg['color']};text-shadow:0 0 15px {cfg[\"neon\"]};'>"
                 f"{cfg['emoji']} {cls} — {cfg['label']}</div>"
-                f"<div style='font-size:0.72rem;color:#6B8499;margin-top:3px;'>"
+                f"<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;margin-top:4px;'>"
                 f"Généré le {res['ts']} · Groupe 2 · M2 IABD</div>"
                 f"</div>"
-                f"<div style='display:flex;gap:10px;flex-wrap:wrap;'>"
-                f"<div style='text-align:center;background:#F8FAFB;border:1px solid #D8E2EC;"
-                f"border-radius:8px;padding:9px 14px;'>"
-                f"<div style='font-size:0.98rem;font-weight:700;color:{cfg['color']};"
-                f"font-family:JetBrains Mono,monospace;'>{conf*100:.1f}%</div>"
-                f"<div style='font-size:0.57rem;color:#7F8C8D;text-transform:uppercase;'>Confiance</div></div>"
-                f"<div style='text-align:center;background:#F8FAFB;border:1px solid #D8E2EC;"
-                f"border-radius:8px;padding:9px 14px;'>"
-                f"<div style='font-size:0.80rem;font-weight:700;color:{uc};'>{cfg['urgence']}</div>"
-                f"<div style='font-size:0.57rem;color:#7F8C8D;text-transform:uppercase;'>Urgence</div></div>"
+                f"<div style='display:flex;gap:10px;'>"
+                f"<div style='text-align:center;background:rgba(13,71,161,0.2);border:1px solid rgba(66,165,245,0.25);"
+                f"border-radius:10px;padding:10px 16px;'>"
+                f"<div style='font-family:Orbitron,monospace;font-size:18px;font-weight:900;"
+                f"color:{cfg['color']};text-shadow:0 0 12px {cfg[\"neon\"]};'>{conf*100:.1f}%</div>"
+                f"<div style='font-family:Share Tech Mono,monospace;font-size:9px;color:#5a8fbf;"
+                f"text-transform:uppercase;letter-spacing:1px;'>Confiance</div></div>"
+                f"<div style='text-align:center;background:rgba(13,71,161,0.2);border:1px solid rgba(66,165,245,0.25);"
+                f"border-radius:10px;padding:10px 16px;'>"
+                f"<div style='font-family:Exo 2,sans-serif;font-size:13px;font-weight:700;color:{cfg['color']};'>{cfg['urgence']}</div>"
+                f"<div style='font-family:Share Tech Mono,monospace;font-size:9px;color:#5a8fbf;"
+                f"text-transform:uppercase;letter-spacing:1px;'>Urgence</div></div>"
                 f"</div></div></div>",
                 unsafe_allow_html=True,
             )
 
-            col_fr, col_de = st.columns([1, 1], gap="large")
+            col_fr, col_de = st.columns([1,1], gap="large")
 
             with col_fr:
-                st.markdown("<div class='su-l' style='color:#1B4F72;'>🇫🇷 Résumé médical — Français</div>",
-                            unsafe_allow_html=True)
                 st.markdown(
-                    f"<div class='su-fr'><div style='font-size:0.82rem;color:#2C3E50;line-height:1.72;'>"
-                    f"{summary['fr'].replace(chr(10), '<br>')}</div></div>",
+                    f"<div class='sum-card'>"
+                    f"<div class='sum-label' style='color:#42a5f5;'>🇫🇷 Résumé médical — Français</div>"
+                    f"<div class='sum-body'>{summary['fr'].replace(chr(10),'<br>')}</div>"
+                    f"</div>",
                     unsafe_allow_html=True,
                 )
                 if tts_on and st.button("🔊 Écouter en français"):
                     ab = tts(summary["fr"], "Français 🇫🇷")
-                    if ab:
-                        st.audio(ab, format="audio/mp3")
+                    if ab: st.audio(ab, format="audio/mp3")
 
             with col_de:
-                st.markdown("<div class='su-l' style='color:#C8A800;'>🇩🇪 Zusammenfassung — Deutsch</div>",
-                            unsafe_allow_html=True)
                 st.markdown(
-                    f"<div class='su-de'><div style='font-size:0.82rem;color:#3D3000;line-height:1.72;'>"
-                    f"{summary['de'].replace(chr(10), '<br>')}</div></div>",
+                    f"<div class='sum-de-card'>"
+                    f"<div class='sum-label' style='color:#ffc107;'>🇩🇪 Zusammenfassung — Deutsch</div>"
+                    f"<div class='sum-body' style='color:#ffe082;'>{summary['de'].replace(chr(10),'<br>')}</div>"
+                    f"</div>",
                     unsafe_allow_html=True,
                 )
                 if tts_on and st.button("🔊 Auf Deutsch anhören"):
                     ab = tts(summary["de"], "Allemand 🇩🇪")
-                    if ab:
-                        st.audio(ab, format="audio/mp3")
+                    if ab: st.audio(ab, format="audio/mp3")
 
-            # Export texte
-            ctx = CTX[cls]
+            # Export
+            ctx_data = CTX[cls]
             export = (
                 f"MEDICALScan AI — COMPTE RENDU · {res['ts']}\n"
                 f"Groupe 2 · M2 IABD · HAMAD · KAMNO · EFEMBA · MBOG\n{'='*60}\n"
                 f"Classe : {cls} ({cfg['label']}) | Confiance : {conf*100:.1f}%\n"
-                f"Urgence : {ctx['urgence']} | Suivi : {ctx['suivi']}\n"
+                f"Urgence : {ctx_data['urgence']} | Suivi : {ctx_data['suivi']}\n"
                 f"{'='*60} RÉSUMÉ FR {'='*60}\n{summary['fr']}\n"
                 f"{'='*60} ZUSAMMENFASSUNG DE {'='*60}\n{summary['de']}\n"
                 f"{'='*60}\nRésultat IA — à confirmer par un professionnel de santé.\n"
             )
-            c1, c2, _ = st.columns([1, 1, 3])
+            c1, c2, _ = st.columns([1,1,3])
             with c1:
                 fn = f"MEDICALScan_{res['ts'].replace(' ','_').replace(':','-')}.txt"
-                st.download_button("⬇️ Télécharger .txt",
-                                   data=export.encode("utf-8"), file_name=fn, mime="text/plain")
+                st.download_button("⬇️ Télécharger .txt", data=export.encode("utf-8"), file_name=fn, mime="text/plain")
             with c2:
                 if st.button("🔄 Régénérer"):
-                    st.session_state.pop("summary", None)
-                    st.rerun()
+                    st.session_state.pop("summary",None); st.rerun()
 
 # ─── §15  MONITORING ──────────────────────────────────────────────────────────
 with tab_mon:
     traces = st.session_state.get("llm_traces", [])
 
-    st.markdown(
-        "<div style='font-size:1.00rem;font-weight:700;color:#1A2332;margin-bottom:18px;'>"
-        "📊 Monitoring LangSmith</div>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("<div class='section-title'>📊 Monitoring LangSmith</div>", unsafe_allow_html=True)
 
     if not ls_active:
         st.markdown(
-            "<div class='card'><div style='text-align:center;padding:22px;'>"
-            "<div style='font-size:2rem;margin-bottom:10px;'>📡</div>"
-            "<div style='font-size:0.83rem;color:#7F8C8D;margin-bottom:10px;'>LangSmith désactivé</div>"
-            "<div style='font-size:0.72rem;color:#A0B8C8;'>"
-            "Activez dans la barre latérale · Clé gratuite sur <strong>smith.langchain.com</strong>"
-            "</div></div></div>",
+            "<div style='height:280px;display:flex;align-items:center;justify-content:center;"
+            "flex-direction:column;gap:14px;background:rgba(4,14,38,0.6);"
+            "border:1px solid rgba(66,165,245,0.2);border-radius:16px;'>"
+            "<div style='font-size:3rem;opacity:0.15;'>📡</div>"
+            "<div style='font-family:Exo 2,sans-serif;font-size:13px;color:#3d6b9e;text-align:center;'>"
+            "LangSmith désactivé<br>"
+            "<span style='font-family:Share Tech Mono,monospace;font-size:10px;color:#2d5a8e;'>"
+            "Activez dans la barre latérale · Clé gratuite sur <strong style='color:#42a5f5;'>smith.langchain.com</strong>"
+            "</span></div></div>",
             unsafe_allow_html=True,
         )
     elif not traces:
-        st.info("Aucune trace — utilisez l'assistant médical pour commencer.")
+        st.markdown(
+            "<div class='info-box'>Aucune trace — utilisez l'assistant médical pour commencer.</div>",
+            unsafe_allow_html=True,
+        )
     else:
-        n_calls   = len(traces)
-        avg_lat   = int(np.mean([t.get("latency_ms", 0) for t in traces]))
-        tot_tok   = sum(t.get("tokens_in", 0) + t.get("tokens_out", 0) for t in traces)
-        tot_out   = sum(t.get("tokens_out", 0) for t in traces)
+        n_calls = len(traces)
+        avg_lat = int(np.mean([t.get("latency_ms",0) for t in traces]))
+        tot_tok = sum(t.get("tokens_in",0)+t.get("tokens_out",0) for t in traces)
+        tot_out = sum(t.get("tokens_out",0) for t in traces)
 
         for col, val, lbl in zip(
             st.columns(4),
             [n_calls, f"{avg_lat} ms", f"{tot_tok:,}", tot_out],
-            ["Appels LLM", "Latence moy.", "Tokens total", "Tokens générés"],
+            ["Appels LLM","Latence moy.","Tokens total","Tokens générés"],
         ):
             with col:
                 st.markdown(
-                    f"<div class='mn'><div class='mn-v'>{val}</div>"
-                    f"<div class='mn-l'>{lbl}</div></div>",
+                    f"<div class='mon-card'>"
+                    f"<div class='mon-val'>{val}</div>"
+                    f"<div class='mon-lbl'>{lbl}</div></div>",
                     unsafe_allow_html=True,
                 )
 
         st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
 
         import pandas as pd
-
         st.dataframe(
             pd.DataFrame([{
-                "Heure":        t.get("timestamp", ""),
-                "Run":          t.get("run_name", ""),
-                "Modèle":       t.get("model", ""),
-                "Latence (ms)": t.get("latency_ms", 0),
-                "Tokens IN":    t.get("tokens_in", 0),
-                "Tokens OUT":   t.get("tokens_out", 0),
+                "Heure":        t.get("timestamp",""),
+                "Run":          t.get("run_name",""),
+                "Modèle":       t.get("model",""),
+                "Latence (ms)": t.get("latency_ms",0),
+                "Tokens IN":    t.get("tokens_in",0),
+                "Tokens OUT":   t.get("tokens_out",0),
             } for t in traces]),
-            use_container_width=True,
-            hide_index=True,
+            use_container_width=True, hide_index=True,
         )
 
         if len(traces) > 1:
             st.markdown(
-                "<div style='font-size:0.67rem;color:#7F8C8D;text-transform:uppercase;"
-                "letter-spacing:1px;margin:14px 0 6px;'>Latence par appel (ms)</div>",
+                "<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;"
+                "text-transform:uppercase;letter-spacing:1.5px;margin:14px 0 6px;'>Latence par appel (ms)</div>",
                 unsafe_allow_html=True,
             )
-            st.bar_chart([t.get("latency_ms", 0) for t in traces])
+            st.bar_chart([t.get("latency_ms",0) for t in traces])
 
         st.markdown(
-            "<div class='card' style='margin-top:10px;'>"
-            "<div style='font-size:0.73rem;color:#6B8499;'>"
+            "<div class='ct-result-card' style='margin-top:10px;'>"
+            "<div style='font-family:Exo 2,sans-serif;font-size:13px;color:#8aabcc;'>"
             "🌐 Dashboard complet : "
             "<a href='https://smith.langchain.com' target='_blank'"
-            " style='color:#1B4F72;font-weight:600;text-decoration:none;'>"
-            "smith.langchain.com</a> → Projet : <strong>MEDICALScan-AI</strong>"
+            " style='color:#42a5f5;font-weight:700;text-decoration:none;'>"
+            "smith.langchain.com</a> → Projet : "
+            "<span style='color:#7c4dff;font-weight:700;'>MEDICALScan-AI</span>"
             "</div></div>",
             unsafe_allow_html=True,
         )
 
         if st.button("🗑️ Effacer les traces"):
-            st.session_state["llm_traces"] = []
-            st.rerun()
+            st.session_state["llm_traces"] = []; st.rerun()
 
 # §16 ── Footer ────────────────────────────────────────────────────────────────
 st.markdown(
     "<div class='footer'>"
-    "<div class='ft-d'>"
-    "<strong>⚠️ Avertissement médical :</strong> "
-    "Ce système est un outil d'aide à la décision basé sur l'intelligence artificielle. "
-    "Il ne remplace en aucun cas un diagnostic médical établi par un professionnel de santé qualifié. "
-    "Tout résultat doit être interprété et confirmé par un radiologue ou médecin spécialiste "
-    "sur les images DICOM originales."
-    "</div>"
-    "<div class='ft-r'>"
-    "MEDICALScan AI v9<br>"
-    "KidneyClassifier v5 · MobileNetV2<br>"
-    "Groupe 2 · M2 IABD · 2026<br>"
-    "HAMAD · KAMNO · EFEMBA · MBOG"
-    "</div>"
-    "</div>",
+    "<div>⚠️ <span>Avertissement médical</span> : Ce système est un outil d'aide à la décision basé sur l'IA. "
+    "Il ne remplace en aucun cas un diagnostic médical établi par un professionnel qualifié. "
+    "Tout résultat doit être confirmé par un radiologue ou médecin spécialiste.</div>"
+    "<div style='margin-top:8px;'>"
+    "MEDICALScan AI · <span>KidneyClassifier v5</span> · MobileNetV2 · "
+    "<span>Groupe 2 · M2 IABD · 2026</span> · HAMAD · KAMNO · EFEMBA · MBOG"
+    "</div></div>",
     unsafe_allow_html=True,
 )
