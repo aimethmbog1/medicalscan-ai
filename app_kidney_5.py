@@ -903,33 +903,43 @@ def make_system_prompt(res):
 
 # §10 ── Composant render_ct_result ────────────────────────────────────────────
 def render_ct_result(res: dict) -> None:
-    cls  = res["class"]; conf = res["conf"]; cfg = CLASS_CFG[cls]
+    cls      = res["class"]
+    conf     = res["conf"]
+    cfg      = CLASS_CFG[cls]
+    c_color  = cfg["color"]
+    c_border = cfg["border"]
+    c_neon   = cfg["neon"]
+    c_emoji  = cfg["emoji"]
+    c_label  = cfg["label"]
+    c_urg    = cfg["urgence"]
+    ts_short = res["ts"][-8:]
+    conf_pct = f"{conf*100:.1f}"
 
     # En-tête résultat
     st.markdown(
-        f"<div class='ct-result-card' style='--card-accent:{cfg[\"color\"]};border-color:{cfg[\"border\"]};'>"
+        f"<div class='ct-result-card' style='--card-accent:{c_color};border-color:{c_border};'>"
         f"<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;"
         f"letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;'>Diagnostic IA — Résultat</div>"
         f"<div style='font-family:Orbitron,monospace;font-size:28px;font-weight:900;"
-        f"color:{cfg[\"color\"]};text-shadow:0 0 20px {cfg[\"neon\"]};line-height:1.1;'>"
-        f"{cfg['emoji']} {cls}</div>"
-        f"<div style='font-family:Exo 2,sans-serif;font-size:14px;color:#8aabcc;margin-top:4px;'>{cfg['label']}</div>"
+        f"color:{c_color};text-shadow:0 0 20px {c_neon};line-height:1.1;'>"
+        f"{c_emoji} {cls}</div>"
+        f"<div style='font-family:Exo 2,sans-serif;font-size:14px;color:#8aabcc;margin-top:4px;'>{c_label}</div>"
         f"</div>",
         unsafe_allow_html=True,
     )
 
     # Barre de confiance
     st.markdown(
-        f"<div class='ct-result-card' style='--card-accent:{cfg[\"color\"]};border-color:{cfg[\"border\"]};padding:14px 18px;'>"
+        f"<div class='ct-result-card' style='--card-accent:{c_color};border-color:{c_border};padding:14px 18px;'>"
         f"<div style='display:flex;justify-content:space-between;font-family:Exo 2,sans-serif;"
         f"font-size:12px;color:#7aabd4;font-weight:600;margin-bottom:8px;'>"
         f"<span>Niveau de confiance</span>"
-        f"<span style='font-family:Orbitron,monospace;font-weight:900;font-size:16px;color:{cfg[\"color\"]};"
-        f"text-shadow:0 0 15px {cfg[\"neon\"]};'>{conf*100:.1f}%</span></div>"
+        f"<span style='font-family:Orbitron,monospace;font-weight:900;font-size:16px;color:{c_color};"
+        f"text-shadow:0 0 15px {c_neon};'>{conf_pct}%</span></div>"
         f"<div style='height:10px;background:rgba(13,71,161,0.2);border-radius:5px;overflow:hidden;"
         f"border:1px solid rgba(66,165,245,0.15);'>"
-        f"<div style='height:100%;width:{conf*100:.1f}%;background:linear-gradient(90deg,{cfg[\"color\"]},{cfg[\"neon\"]});"
-        f"border-radius:5px;box-shadow:0 0 10px {cfg[\"neon\"]};'></div></div>"
+        f"<div style='height:100%;width:{conf_pct}%;background:linear-gradient(90deg,{c_color},{c_neon});"
+        f"border-radius:5px;box-shadow:0 0 10px {c_neon};'></div></div>"
         f"</div>",
         unsafe_allow_html=True,
     )
@@ -939,23 +949,23 @@ def render_ct_result(res: dict) -> None:
     lbl_style = "font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;"
     with c1:
         st.markdown(
-            f"<div class='ct-result-card' style='text-align:center;--card-accent:{cfg[\"color\"]};border-color:{cfg[\"border\"]};padding:14px;'>"
+            f"<div class='ct-result-card' style='text-align:center;--card-accent:{c_color};border-color:{c_border};padding:14px;'>"
             f"<div style='font-family:Orbitron,monospace;font-size:22px;font-weight:900;"
-            f"color:{cfg[\"color\"]};text-shadow:0 0 15px {cfg[\"neon\"]};'>{conf*100:.1f}%</div>"
+            f"color:{c_color};text-shadow:0 0 15px {c_neon};'>{conf_pct}%</div>"
             f"<div style='{lbl_style}'>Confiance</div></div>", unsafe_allow_html=True,
         )
     with c2:
         st.markdown(
-            f"<div class='ct-result-card' style='text-align:center;--card-accent:{cfg[\"color\"]};border-color:{cfg[\"border\"]};padding:14px;'>"
+            f"<div class='ct-result-card' style='text-align:center;--card-accent:{c_color};border-color:{c_border};padding:14px;'>"
             f"<div style='font-family:Exo 2,sans-serif;font-size:13px;font-weight:700;"
-            f"color:{cfg[\"color\"]};'>{cfg['urgence']}</div>"
+            f"color:{c_color};'>{c_urg}</div>"
             f"<div style='{lbl_style}'>Urgence</div></div>", unsafe_allow_html=True,
         )
     with c3:
         st.markdown(
             f"<div class='ct-result-card' style='text-align:center;--card-accent:#42a5f5;padding:14px;'>"
             f"<div style='font-family:Share Tech Mono,monospace;font-size:14px;font-weight:700;"
-            f"color:#42a5f5;'>{res['ts'][-8:]}</div>"
+            f"color:#42a5f5;'>{ts_short}</div>"
             f"<div style='{lbl_style}'>Horodatage</div></div>", unsafe_allow_html=True,
         )
 
@@ -1153,24 +1163,36 @@ with tab_scan:
                 unsafe_allow_html=True,
             )
             for c, p in sorted(res["probs"].items(), key=lambda x: -x[1]):
-                cc = CLASS_CFG[c]; ip = c == cls
-                nm = f"color:{cc['color']};font-weight:700;" if ip else ""
-                op = "1.0" if ip else "0.4"
-                badge_txt = "TOP" if ip else cc["emoji"]
+                cc       = CLASS_CFG[c]
+                ip       = c == cls
+                cc_color = cc["color"]
+                cc_neon  = cc["neon"]
+                cc_bg    = cc["bg"]
+                cc_brd   = cc["border"]
+                cc_emo   = cc["emoji"]
+                nm       = f"color:{cc_color};font-weight:700;" if ip else ""
+                op       = "1.0" if ip else "0.4"
+                badge_txt = "TOP" if ip else cc_emo
+                row_style = "background:rgba(13,71,161,0.15);border-radius:6px;padding:3px 8px;" if ip else ""
+                p_pct = f"{p*100:.1f}"
                 st.markdown(
-                    f"<div class='prob-row' style='{'background:rgba(13,71,161,0.15);border-radius:6px;padding:3px 8px;' if ip else ''}'>"
+                    f"<div class='prob-row' style='{row_style}'>"
                     f"<div class='prob-name' style='{nm}'>{c}</div>"
-                    f"<div class='prob-track'><div class='prob-fill' style='width:{p*100:.1f}%;background:{cc['color']};opacity:{op};box-shadow:0 0 8px {cc[\"neon\"]};'></div></div>"
-                    f"<div class='prob-pct' style='{nm}'>{p*100:.1f}%</div>"
-                    f"<div class='prob-badge' style='background:{cc[\"bg\"]};color:{cc[\"color\"]};border:1px solid {cc[\"border\"]};'>{badge_txt}</div>"
+                    f"<div class='prob-track'><div class='prob-fill' style='width:{p_pct}%;background:{cc_color};opacity:{op};box-shadow:0 0 8px {cc_neon};'></div></div>"
+                    f"<div class='prob-pct' style='{nm}'>{p_pct}%</div>"
+                    f"<div class='prob-badge' style='background:{cc_bg};color:{cc_color};border:1px solid {cc_brd};'>{badge_txt}</div>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )
             st.markdown("</div>", unsafe_allow_html=True)
 
         with ci:
+            c_color  = cfg["color"]
+            c_neon   = cfg["neon"]
+            c_border = cfg["border"]
+            suivi    = CTX[cls]["suivi"]
             st.markdown(
-                f"<div class='ct-result-card' style='border-color:{cfg[\"border\"]};'>"
+                f"<div class='ct-result-card' style='border-color:{c_border};'>"
                 f"<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;"
                 f"letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;"
                 f"padding-bottom:8px;border-bottom:1px solid rgba(66,165,245,0.15);'>"
@@ -1180,8 +1202,8 @@ with tab_scan:
                 f"<div style='margin-top:14px;padding-top:12px;border-top:1px solid rgba(66,165,245,0.15);'>"
                 f"<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;"
                 f"text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;'>Suivi recommandé</div>"
-                f"<div style='font-family:Exo 2,sans-serif;font-size:13px;font-weight:700;color:{cfg['color']};"
-                f"text-shadow:0 0 10px {cfg[\"neon\"]};'>{CTX[cls]['suivi']}</div>"
+                f"<div style='font-family:Exo 2,sans-serif;font-size:13px;font-weight:700;color:{c_color};"
+                f"text-shadow:0 0 10px {c_neon};'>{suivi}</div>"
                 f"</div></div>",
                 unsafe_allow_html=True,
             )
@@ -1217,15 +1239,20 @@ with tab_chat:
             "<span class='pill pill-ok'>🇩🇪 Traduction</span>"  if show_tr   else "",
             "<span class='pill pill-ok'>🟢 LangSmith</span>"   if ls_active else "",
         ])
+        c_color  = cfg["color"]
+        c_neon   = cfg["neon"]
+        c_emoji  = cfg["emoji"]
+        c_label  = cfg["label"]
+        conf_pct = f"{conf*100:.1f}"
         st.markdown(
             f"<div style='background:rgba(4,14,38,0.7);border:1px solid rgba(66,165,245,0.2);"
-            f"border-left:3px solid {cfg['color']};border-radius:10px;padding:12px 16px;"
+            f"border-left:3px solid {c_color};border-radius:10px;padding:12px 16px;"
             f"display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;'>"
             f"<div>"
             f"<div style='font-family:Orbitron,monospace;font-size:14px;font-weight:700;"
-            f"color:{cfg['color']};text-shadow:0 0 10px {cfg[\"neon\"]};'>{cfg['emoji']} {cls} — {cfg['label']}</div>"
+            f"color:{c_color};text-shadow:0 0 10px {c_neon};'>{c_emoji} {cls} — {c_label}</div>"
             f"<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;margin-top:3px;'>"
-            f"Confiance {conf*100:.1f}% · {res['ts']} · {groq_model}</div></div>"
+            f"Confiance {conf_pct}% · {res['ts']} · {groq_model}</div></div>"
             f"<div style='display:flex;gap:6px;'>{pills}</div></div>",
             unsafe_allow_html=True,
         )
@@ -1349,21 +1376,28 @@ with tab_sum:
             st.session_state["summary"] = summary
 
         if summary:
-            cls = res["class"]; conf = res["conf"]
-            cfg = CLASS_CFG[cls]
+            cls      = res["class"]; conf = res["conf"]
+            cfg      = CLASS_CFG[cls]
+            c_color  = cfg["color"]
+            c_neon   = cfg["neon"]
+            c_border = cfg["border"]
+            c_emoji  = cfg["emoji"]
+            c_label  = cfg["label"]
+            c_urg    = cfg["urgence"]
+            conf_pct = f"{conf*100:.1f}"
 
             st.markdown("<div class='section-title'>📋 Compte Rendu de Consultation</div>", unsafe_allow_html=True)
 
             # En-tête compte rendu
             st.markdown(
-                f"<div class='ct-result-card' style='border-color:{cfg[\"border\"]};padding:20px;margin-bottom:18px;'>"
+                f"<div class='ct-result-card' style='border-color:{c_border};padding:20px;margin-bottom:18px;'>"
                 f"<div style='display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;'>"
                 f"<div>"
                 f"<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;"
                 f"text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;'>Compte Rendu — MEDICALScan AI</div>"
                 f"<div style='font-family:Orbitron,monospace;font-size:20px;font-weight:900;"
-                f"color:{cfg['color']};text-shadow:0 0 15px {cfg[\"neon\"]};'>"
-                f"{cfg['emoji']} {cls} — {cfg['label']}</div>"
+                f"color:{c_color};text-shadow:0 0 15px {c_neon};'>"
+                f"{c_emoji} {cls} — {c_label}</div>"
                 f"<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#5a8fbf;margin-top:4px;'>"
                 f"Généré le {res['ts']} · Groupe 2 · M2 IABD</div>"
                 f"</div>"
@@ -1371,12 +1405,12 @@ with tab_sum:
                 f"<div style='text-align:center;background:rgba(13,71,161,0.2);border:1px solid rgba(66,165,245,0.25);"
                 f"border-radius:10px;padding:10px 16px;'>"
                 f"<div style='font-family:Orbitron,monospace;font-size:18px;font-weight:900;"
-                f"color:{cfg['color']};text-shadow:0 0 12px {cfg[\"neon\"]};'>{conf*100:.1f}%</div>"
+                f"color:{c_color};text-shadow:0 0 12px {c_neon};'>{conf_pct}%</div>"
                 f"<div style='font-family:Share Tech Mono,monospace;font-size:9px;color:#5a8fbf;"
                 f"text-transform:uppercase;letter-spacing:1px;'>Confiance</div></div>"
                 f"<div style='text-align:center;background:rgba(13,71,161,0.2);border:1px solid rgba(66,165,245,0.25);"
                 f"border-radius:10px;padding:10px 16px;'>"
-                f"<div style='font-family:Exo 2,sans-serif;font-size:13px;font-weight:700;color:{cfg['color']};'>{cfg['urgence']}</div>"
+                f"<div style='font-family:Exo 2,sans-serif;font-size:13px;font-weight:700;color:{c_color};'>{c_urg}</div>"
                 f"<div style='font-family:Share Tech Mono,monospace;font-size:9px;color:#5a8fbf;"
                 f"text-transform:uppercase;letter-spacing:1px;'>Urgence</div></div>"
                 f"</div></div></div>",
