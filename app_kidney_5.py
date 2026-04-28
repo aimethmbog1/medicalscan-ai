@@ -1,14 +1,11 @@
 """
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  MEDICALScan AI  ·  Application Streamlit                                  ║
-║  Classification CT Rénale  ·  KidneyClassifier v5  ·  AUC 1.00            ║
-║  Style : StockSight AI Design System                                        ║
-║  (dark navy · blueprint canvas · Orbitron · glassmorphism · néons bleus)   ║
+║  MEDICALScan AI  ·  Application Streamlit                                    ║
+║  Classification CT Rénale  ·  KidneyClassifier v5  ·  AUC 1.00               ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
-║  Groupe 2 · M2 IABD · HAMAD · KAMNO · EFEMBA · MBOG · 2026               ║
+║  Groupe 2 · M2 IABD · HAMAD · KAMNO · EFEMBA · MBOG · 2026                   ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 """
-
 # §1 ── Imports & configuration ────────────────────────────────────────────────
 import io
 import os
@@ -69,8 +66,7 @@ def _load_secrets() -> dict:
         "MP":    _get("MODEL_PATH")          or "outputs_v5/KidneyClassifier_v5.keras",
         "TP":    _get("THRESH_PATH")         or "outputs_v5/thresholds.npy",
     }
-
-
+    
 KEYS: dict = _load_secrets()
 
 # §4 ── Constantes médicales ───────────────────────────────────────────────────
@@ -742,8 +738,6 @@ with st.sidebar:
         [
             "llama-3.3-70b-versatile",   # meilleur choix par défaut
             "llama-3.1-8b-instant",       # rapide, léger
-            "llama3-70b-8192",            # remplace mixtral
-            "llama3-8b-8192",             # remplace gemma2
         ],
         label_visibility="collapsed",
     )
