@@ -3,7 +3,7 @@
 ║  MEDICALScan AI  ·  Application Streamlit                                    ║
 ║  Classification CT Rénale  ·  KidneyClassifier v5  ·  AUC 1.00               ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
-║                              MBOG · 2026                                     ║
+║                              SN · 2026                                     ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 """
 # §1 ── Imports & configuration ────────────────────────────────────────────────
@@ -766,7 +766,7 @@ with st.sidebar:
         "<div style='padding:14px;margin-top:40px;border-top:1px solid rgba(66,165,245,0.15);'>"
         "<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:#2d5a8e;line-height:1.8;text-align:center;'>"
         "<span style='color:#42a5f5;font-weight:700;'>Groupe 2 · M2 IABD</span><br>"
-        "HAMAD · KAMNO · EFEMBA · MBOG<br>"
+        "KEYCE<br>"
         "KidneyClassifier v5 · AUC 1.00"
         "</div></div>",
         unsafe_allow_html=True,
@@ -1482,7 +1482,7 @@ with tab_sum:
             ctx_data = CTX[cls]
             export = (
                 f"MEDICALScan AI — COMPTE RENDU · {res['ts']}\n"
-                f"MBOG\n{'='*60}\n"
+                f"SN\n{'='*60}\n"
                 f"Classe : {cls} ({cfg['label']}) | Confiance : {conf*100:.1f}%\n"
                 f"Urgence : {ctx_data['urgence']} | Suivi : {ctx_data['suivi']}\n"
                 f"{'='*60} RÉSUMÉ FR {'='*60}\n{summary['fr']}\n"
@@ -1586,7 +1586,7 @@ st.markdown(
     "Tout résultat doit être confirmé par un radiologue ou médecin spécialiste.</div>"
     "<div style='margin-top:8px;'>"
     "MEDICALScan AI · <span>KidneyClassifier v5</span> · MobileNetV2 · "
-    "<span>· M2 IABD · 2026</span> · MBOG"
+    "<span>· M2 IABD · 2026</span> · SN"
     "</div></div>",
     unsafe_allow_html=True,
 )
